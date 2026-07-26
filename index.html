@@ -99,15 +99,6 @@
       width: fit-content;
       transition: transform 0.25s ease, color 0.25s ease;
     }
-    /* the little index number, e.g. 01, 02 ... */
-    .nav a .num {
-      font-family: "Inter", monospace;
-      font-size: 0.72rem;
-      font-weight: 600;
-      letter-spacing: 0.05em;
-      color: #b9bec9;
-      transition: color 0.25s ease;
-    }
     /* the label, with an underline that sweeps in on hover */
     .nav a .label { position: relative; }
     .nav a .label::after {
@@ -122,7 +113,6 @@
     }
     /* hover: slide right, number turns gold, underline sweeps in */
     .nav a:hover { transform: translateX(8px); color: var(--blue); }
-    .nav a:hover .num { color: #d99a00; }
     .nav a:hover .label::after { transform: scaleX(1); }
 
     .bio {
@@ -170,19 +160,6 @@
     .about    { order: 1; }
     .services { order: 2; }
     .work     { order: 3; }
-    .status {
-      position: absolute;
-      top: 2.5rem; right: 4rem;
-      display: flex; align-items: center; gap: 10px;
-      color: var(--muted);
-      font-size: 0.85rem;
-      letter-spacing: 0.12em;
-    }
-    .status .dot {
-      width: 9px; height: 9px; border-radius: 50%;
-      background: #22c55e;
-    }
-
     .headline {
       font-family: "Newsreader", Georgia, serif;
       font-weight: 400;
@@ -429,7 +406,8 @@
     /* ===== cover cards (clean, image-forward — label top-left, meta top-right) ===== */
     .card-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      /* min(100%, 300px) so the 300px floor never forces overflow on narrow screens */
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
       gap: 16px;
       margin-top: 1.1rem;
     }
@@ -501,6 +479,10 @@
       transition: background 0.3s ease;
     }
     .mosaic .tile:hover .more { background: rgba(15,15,18,0.32); }
+    @media (prefers-reduced-motion: reduce) {
+      .mosaic .tile img { transition: opacity 0.4s ease; }
+      .mosaic .tile:hover img { transform: none; }
+    }
     @media (max-width: 800px) {
       .mosaic { grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(2, 1fr); aspect-ratio: 1 / 1; }
       .mosaic .tile:first-child { grid-column: span 2; grid-row: span 1; }
@@ -638,12 +620,13 @@
     /* slot = position/rotation (scrubbed by scroll); card = the note itself */
     .do-slot {
       flex: 0 0 296px;
+      margin: 0 -148px;             /* overlap into one centered stack — no wide flow reservation */
       will-change: transform;
     }
     /* DEFAULT = stacked into one note; outer notes hide behind the middle */
-    .do-slot--1 { transform: translateX(296px)  translateY(62px) rotate(0deg) scale(0.96); z-index: 2; }
-    .do-slot--2 { transform: translateX(0)      translateY(62px) rotate(0deg);             z-index: 3; }
-    .do-slot--3 { transform: translateX(-296px) translateY(62px) rotate(0deg) scale(0.97); z-index: 1; }
+    .do-slot--1 { transform: translateY(62px) scale(0.96); z-index: 2; }
+    .do-slot--2 { transform: translateY(62px);             z-index: 3; }
+    .do-slot--3 { transform: translateY(62px) scale(0.97); z-index: 1; }
     .do-slot:hover { z-index: 6; }
 
     .do-card {
@@ -689,13 +672,14 @@
     }
     .do-icon img { width: 100%; height: 100%; object-fit: contain; }
 
-    @media (max-width: 900px) {
+    @media (max-width: 1200px) {
       .services-scroll { height: auto; }
       .services-pin { position: static; height: auto; padding: 4.5rem 0; }
       .cards { flex-direction: column; align-items: center; gap: 2.6rem; }
       .do-slot {
         transform: none !important;
         flex: 0 0 auto; width: min(340px, 88%);
+        margin: 0;
       }
     }
 
@@ -774,6 +758,11 @@
     .reveal.in { opacity: 1; transform: none; }
     @media (prefers-reduced-motion: reduce) {
       .reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+      .bio { animation: none; }
+      .cursor { animation: none; }               /* stop the blink */
+      .cam-wrap img { animation: none; }         /* cameras stop bobbing */
+      .cg-img,
+      .cg-img.show { transform: none !important; transition: opacity 0.4s ease !important; }  /* no ken-burns zoom */
     }
 
     /* ===== Contact / footer ===== */
@@ -859,13 +848,35 @@
     /* ---------- make it work on phones ---------- */
     @media (max-width: 800px) {
       .layout { grid-template-columns: 1fr; }
-      .sidebar { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--line); }
-      .bio { margin-top: 2rem; }
+      /* compact top bar instead of a tall stacked sidebar */
+      .sidebar {
+        position: static; height: auto;
+        border-right: none; border-bottom: 1px solid var(--line);
+        padding: 1.5rem 1.5rem 1.7rem;
+      }
+      .nav {                        /* links flow in a row, not a tall column */
+        flex-direction: row; flex-wrap: wrap;
+        gap: 0.9rem 1.5rem; margin-top: 1.5rem;
+      }
+      .nav a:hover { transform: none; }   /* no sideways nudge in a horizontal row */
+      .bio { margin-top: 1.4rem; max-width: 46ch; }
       .main { padding: 2rem 1.5rem; }
-      .status { position: static; margin-bottom: 2rem; }
       .headline { margin-top: 2rem; }
-      .hero { min-height: auto; padding: 3rem 0; }
+      .hero { min-height: auto; padding: 2.5rem 0 3rem; }
       .project { grid-template-columns: 1fr; gap: 1.2rem; }
+    }
+
+    /* ---------- small phones: tighten type + spacing ---------- */
+    @media (max-width: 430px) {
+      .main { padding: 1.6rem 1.15rem; }
+      .sidebar { padding: 1.25rem 1.15rem 1.4rem; }
+      /* the long typed role word (e.g. visual_storyteller,) can't force overflow */
+      .headline { font-size: 1.55rem; overflow-wrap: anywhere; }
+      .typed-live { white-space: normal; }
+      .work { padding-top: 4.5rem; padding-bottom: 4rem; }
+      .featured { margin-bottom: 2.4rem; }
+      .collection { margin-top: 2.4rem; }
+      .contact-gallery { gap: 0.7rem; margin-bottom: 2.4rem; }
     }
   </style>
 </head>
@@ -897,9 +908,15 @@
       </p>
 
       <div class="socials">
-        <a href="mailto:ahmadnaffif@gmail.com" aria-label="Email">✉</a>
-        <a href="#" aria-label="LinkedIn">in</a>
-        <a href="#" aria-label="Instagram">◎</a>
+        <a href="mailto:ahmadnaffif@gmail.com" aria-label="Email">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+        </a>
+        <a href="https://www.linkedin.com/in/ahmad-naffi-firdaus-53a9222ba" target="_blank" rel="noopener" aria-label="LinkedIn">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.83-2.05 3.77-2.05 4.03 0 4.78 2.65 4.78 6.1V21H20v-5.4c0-1.29-.02-2.95-1.8-2.95-1.8 0-2.07 1.4-2.07 2.85V21H12z"/></svg>
+        </a>
+        <a href="https://www.instagram.com/naffifirdaus" target="_blank" rel="noopener" aria-label="Instagram">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.3" cy="6.7" r="1" fill="currentColor" stroke="none"/></svg>
+        </a>
       </div>
     </aside>
 
@@ -907,7 +924,7 @@
     <main class="main">
       <section class="hero">
         <h1 class="headline">
-          Hi, I'm Naffi, a <span class="typed-wrap"><span class="typed-sizer">visual_storyteller,</span><span class="typed-live"><span class="typed" id="typed"></span><span class="comma">,</span><span class="cursor" id="cursor">&nbsp;</span></span></span>
+          Hi, I'm Naffi, <span id="article">a</span> <span class="typed-wrap"><span class="typed-sizer">visual_storyteller,</span><span class="typed-live"><span class="typed" id="typed"></span><span class="comma">,</span><span class="cursor" id="cursor">&nbsp;</span></span></span>
           who finds the story hiding behind every pose
         </h1>
       </section>
@@ -933,7 +950,7 @@
               <strong>Film</strong> — grain, natural light, and
               <em>random moments &amp; memories</em> caught on 35mm.
             </p>
-            <div class="photo-set" data-node="analog"></div>
+            <div class="photo-set" data-node="analog" data-cover="000000220033~2.jpg, Bersoreria419059.jpg, Bersoreria450808.jpg, Bersoreria419057.jpg, Bersoreria450797.jpg, Bersoreria206628.jpg"></div>
           </div>
 
           <div class="collection">
@@ -1070,8 +1087,8 @@
           <h2 class="contact-name">Ahmad Naffi Firdaus</h2>
           <div class="contact-links">
             <a href="mailto:ahmadnaffif@gmail.com">Email</a>
-            <a href="#" target="_blank" rel="noopener">Instagram</a>
-            <a href="#" target="_blank" rel="noopener">LinkedIn</a>
+            <a href="https://www.instagram.com/naffifirdaus" target="_blank" rel="noopener">Instagram</a>
+            <a href="https://www.linkedin.com/in/ahmad-naffi-firdaus-53a9222ba" target="_blank" rel="noopener">LinkedIn</a>
             <a href="#" target="_blank" rel="noopener">Resume</a>
           </div>
         </div>
@@ -1115,8 +1132,13 @@
       { text: "emotion_chaser",     color: "#d99a00" },
     ];
 
-    const typedEl  = document.getElementById("typed");
-    const root     = document.documentElement;
+    const typedEl   = document.getElementById("typed");
+    const articleEl = document.getElementById("article");
+    const root      = document.documentElement;
+    const article   = (w) => (/^[aeiou]/i.test(w) ? "an" : "a");   // "a" / "an" agrees with the word
+
+    // respect the OS "reduce motion" setting — used to calm the JS-driven effects below
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     let roleIndex = 0;   // which word we're on
     let charIndex = 0;   // how many letters are shown
@@ -1125,8 +1147,9 @@
     function tick() {
       const role = roles[roleIndex];
 
-      // set the color for the current word
+      // set the color + article for the current word
       root.style.setProperty("--typed-color", role.color);
+      articleEl.textContent = article(role.text);
 
       // show more (or fewer) letters
       typedEl.textContent = role.text.slice(0, charIndex);
@@ -1149,7 +1172,15 @@
       setTimeout(tick, deleting ? 45 : 90);
     }
 
-    tick();
+    if (reduceMotion) {
+      // no typing animation — just show the first role, statically
+      root.style.setProperty("--typed-color", roles[0].color);
+      articleEl.textContent = article(roles[0].text);
+      typedEl.textContent = roles[0].text;
+      document.getElementById("cursor").style.display = "none";
+    } else {
+      tick();
+    }
 
     /* ===== CURSOR-FOLLOWING GLOW =====
        The glow eases toward the mouse (a little lag = smooth, premium feel). */
@@ -1161,6 +1192,7 @@
     window.addEventListener("mousemove", (e) => {
       mouseX = e.clientX;
       mouseY = e.clientY;
+      if (reduceMotion) return;        // no cursor glow when motion is reduced
       glow.style.opacity = 1;          // reveal on movement
 
       // hide the glow after 2 seconds of no movement (AFK)
@@ -1177,7 +1209,7 @@
       glow.style.top  = glowY + "px";
       requestAnimationFrame(moveGlow);
     }
-    moveGlow();
+    if (!reduceMotion) moveGlow();
 
     /* ===== WINK WHILE THE MOUSE IS HELD DOWN ===== */
     const avatar = document.getElementById("avatar");
@@ -1288,11 +1320,21 @@
       return card;
     }
 
-    // a filled preview for a single-set category: 1 big + a few small tiles
-    function makeMosaic(images, title) {
-      const m = galEl("div", "mosaic");
+    // a filled preview for a single-set category: 1 big + a few small tiles.
+    // `covers` (basenames) picks which photos show, in order; falls back to the rest.
+    function makeMosaic(images, title, covers) {
       const SHOW = 5;
-      images.slice(0, SHOW).forEach((src, i) => {
+      const picks = [];
+      (covers || []).forEach((bn) => {
+        const m = images.find((s) => s.split("/").pop() === bn);
+        if (m && !picks.includes(m)) picks.push(m);
+      });
+      for (const s of images) { if (picks.length >= SHOW) break; if (!picks.includes(s)) picks.push(s); }
+      const shown = picks.slice(0, SHOW);
+      const remaining = images.length - shown.length;
+
+      const m = galEl("div", "mosaic");
+      shown.forEach((src, i) => {
         const tile = galEl("div", "tile");
         const img = document.createElement("img");
         img.loading = "lazy";
@@ -1300,9 +1342,9 @@
         img.addEventListener("load", () => img.classList.add("loaded"));
         img.src = encodeURI(src);
         tile.appendChild(img);
-        if (i === SHOW - 1 && images.length > SHOW) {   // "+N more" on the last tile
+        if (i === shown.length - 1 && remaining > 0) {   // "+N more" on the last tile
           const more = galEl("div", "more");
-          more.textContent = "+" + (images.length - SHOW);
+          more.textContent = "+" + remaining;
           tile.appendChild(more);
         }
         tile.addEventListener("click", () => openGallery(images, title));
@@ -1316,7 +1358,8 @@
       if (isSet(node)) {
         if (topLevel) {
           const nice = name.charAt(0).toUpperCase() + name.slice(1);
-          container.appendChild(makeMosaic(node.images, nice));   // fills the space nicely
+          const covers = (container.dataset.cover || "").split(",").map((s) => s.trim()).filter(Boolean);
+          container.appendChild(makeMosaic(node.images, nice, covers));
         } else {
           const grid = galEl("div", "card-grid");
           grid.appendChild(makeCard(node.images, name));
@@ -1427,10 +1470,11 @@
     const cardsEl = document.querySelector(".cards");
     const slots = Array.from(document.querySelectorAll(".do-slot"));
     // per slot: a = stacked (start), b = fanned (end)
+    // baseline is now an overlapping centered stack (x:0), so x holds the final spread
     const SPLIT = [
-      { a: { x: 296,  y: 62, r: 0, s: 0.96 }, b: { x: 28,  y: 0,  r: -4, s: 1 } },
-      { a: { x: 0,    y: 62, r: 0, s: 1 },    b: { x: 0,   y: 62, r: 3,  s: 1 } },
-      { a: { x: -296, y: 62, r: 0, s: 0.97 }, b: { x: -28, y: 26, r: -2, s: 1 } },
+      { a: { x: 0, y: 62, r: 0, s: 0.96 }, b: { x: -268, y: 0,  r: -4, s: 1 } },
+      { a: { x: 0, y: 62, r: 0, s: 1 },    b: { x: 0,    y: 62, r: 3,  s: 1 } },
+      { a: { x: 0, y: 62, r: 0, s: 0.97 }, b: { x: 268,  y: 26, r: -2, s: 1 } },
     ];
     const mix = (a, b, p) => a + (b - a) * p;
     function applySplit(p) {
@@ -1445,7 +1489,7 @@
     }
     const scroller = document.querySelector(".services-scroll");
     function onSplitScroll() {
-      if (window.innerWidth <= 900 || !scroller) { slots.forEach((s) => (s.style.transform = "")); return; }
+      if (window.innerWidth <= 1200 || !scroller) { slots.forEach((s) => (s.style.transform = "")); return; }
       const rect = scroller.getBoundingClientRect();
       const vh = window.innerHeight;
       const total = scroller.offsetHeight - vh;       // scroll distance while the section is pinned
@@ -1454,12 +1498,16 @@
       applySplit(p);
     }
     if (cardsEl && slots.length) {
-      let ticking = false;
-      window.addEventListener("scroll", () => {
-        if (!ticking) { ticking = true; requestAnimationFrame(() => { onSplitScroll(); ticking = false; }); }
-      }, { passive: true });
-      window.addEventListener("resize", onSplitScroll);
-      onSplitScroll();
+      if (reduceMotion) {
+        applySplit(1);                 // show the cards fanned out & readable, no scroll scrubbing
+      } else {
+        let ticking = false;
+        window.addEventListener("scroll", () => {
+          if (!ticking) { ticking = true; requestAnimationFrame(() => { onSplitScroll(); ticking = false; }); }
+        }, { passive: true });
+        window.addEventListener("resize", onSplitScroll);
+        onSplitScroll();
+      }
     }
 
     /* ===== ABOUT: cameras drift (parallax) as you scroll ===== */
@@ -1475,7 +1523,7 @@
         w.style.transform = "translateY(" + (t * CAM_PAR[i % CAM_PAR.length]) + "px)";
       });
     }
-    if (aboutSec && camWraps.length) {
+    if (aboutSec && camWraps.length && !reduceMotion) {
       let camTick = false;
       window.addEventListener("scroll", () => {
         if (!camTick) { camTick = true; requestAnimationFrame(() => { onCamScroll(); camTick = false; }); }
@@ -1504,11 +1552,15 @@
     (function () {
       const tiles = document.querySelectorAll(".contact-gallery .cg");
       if (!tiles.length || !window.GALLERY) return;
+      // only real photography here — never the service icons / profile shot
+      const PHOTO_ROOTS = ["analog", "digital"];
+      const roots = {};
+      PHOTO_ROOTS.forEach((k) => { if (window.GALLERY[k]) roots[k] = window.GALLERY[k]; });
       const all = [];
       (function walk(n) {
         if (n.images) n.images.forEach((s) => all.push(s));
         if (n.folders) Object.values(n.folders).forEach(walk);
-      })({ folders: window.GALLERY });
+      })({ folders: roots });
       if (!all.length) return;
       // shuffle for variety
       for (let i = all.length - 1; i > 0; i--) {
@@ -1541,7 +1593,7 @@
           idx = (idx + tiles.length) % all.length;     // step so tiles stay different
           apply(layers[1 - cur], encodeURI(all[idx]), false);
         }
-        setTimeout(() => setInterval(next, 3500), t * 400);   // stagger each tile
+        if (!reduceMotion) setTimeout(() => setInterval(next, 3500), t * 400);   // stagger each tile (static when motion is reduced)
       });
     })();
   </script>
