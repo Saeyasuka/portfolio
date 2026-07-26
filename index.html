@@ -1,0 +1,1549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Naffi — Portfolio</title>
+
+  <!-- Fonts: a serif for headlines, a clean sans for everything else -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ---------- basic reset ---------- */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #f6f6f4;          /* page background */
+      --blue: #2f4fb5;        /* main navy-blue text */
+      --blue-soft: #3a5bc7;   /* nav links */
+      --muted: #6b7280;       /* gray text */
+      --line: #e4e4e0;        /* divider lines */
+    }
+
+    body {
+      font-family: "Inter", -apple-system, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--blue);
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;   /* crop anything that bleeds off the right edge */
+    }
+
+    /* ---------- cursor-following glow ---------- */
+    .glow {
+      position: fixed;
+      top: 0; left: 0;
+      width: 150px; height: 150px;   /* smaller */
+      border-radius: 50%;
+      background: radial-gradient(circle,
+                    rgba(217,154,0,0.11) 0%,
+                    rgba(217,154,0,0.05) 40%,
+                    rgba(217,154,0,0) 70%);   /* very subtle */
+      transform: translate(-50%, -50%);
+      pointer-events: none;   /* never blocks clicks */
+      z-index: 40;            /* above page sections, below the modals (90/100) */
+      filter: blur(24px);
+      opacity: 0;             /* hidden until the mouse moves */
+      transition: opacity 0.6s ease;
+    }
+
+    /* ---------- overall layout: sidebar + main ---------- */
+    .layout {
+      position: relative;
+      z-index: 1;             /* sits above the glow */
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      min-height: 100vh;
+    }
+    /* let the glow show through the layout's empty areas */
+    .sidebar, .main { background: transparent; }
+
+    /* ---------- LEFT SIDEBAR ---------- */
+    .sidebar {
+      position: sticky;            /* stays put while the page scrolls */
+      top: 0;
+      align-self: start;
+      height: 100vh;
+      border-right: 1px solid var(--line);
+      padding: 2.5rem 2rem;
+      display: flex;
+      flex-direction: column;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 600;
+      font-size: 1.05rem;
+    }
+    .brand img {
+      width: 34px; height: 34px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: #ddd;
+    }
+    .nav {
+      margin-top: 3rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.1rem;
+    }
+    .nav a {
+      display: flex;
+      align-items: baseline;
+      gap: 0.8rem;
+      color: var(--blue-soft);
+      text-decoration: none;
+      font-size: 1.05rem;
+      width: fit-content;
+      transition: transform 0.25s ease, color 0.25s ease;
+    }
+    /* the little index number, e.g. 01, 02 ... */
+    .nav a .num {
+      font-family: "Inter", monospace;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      color: #b9bec9;
+      transition: color 0.25s ease;
+    }
+    /* the label, with an underline that sweeps in on hover */
+    .nav a .label { position: relative; }
+    .nav a .label::after {
+      content: "";
+      position: absolute;
+      left: 0; bottom: -3px;
+      width: 100%; height: 2px;
+      background: #d99a00;                 /* gold underline */
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.3s ease;
+    }
+    /* hover: slide right, number turns gold, underline sweeps in */
+    .nav a:hover { transform: translateX(8px); color: var(--blue); }
+    .nav a:hover .num { color: #d99a00; }
+    .nav a:hover .label::after { transform: scaleX(1); }
+
+    .bio {
+      margin-top: auto;              /* pushes bio + socials to the bottom */
+      color: var(--blue-soft);
+      font-size: 0.95rem;
+      line-height: 1.65;
+      max-width: 240px;
+      animation: fadeUp 0.9s ease 0.2s both;   /* gentle rise-in on load */
+    }
+    .bio strong { font-weight: 600; color: var(--blue); }
+    .bio em {
+      font-family: "Newsreader", Georgia, serif;
+      font-style: italic;
+      color: #d99a00;                /* gold accent, matches the headline */
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .socials {
+      display: flex;
+      gap: 12px;
+      margin-top: 1.4rem;
+    }
+    .socials a {
+      width: 38px; height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--blue-soft);
+      transition: background .2s;
+    }
+    .socials a:hover { background: #eef0f7; }
+
+    /* ---------- MAIN AREA ---------- */
+    .main {
+      padding: 2.5rem 4rem;
+      position: relative;
+      display: flex;
+      flex-direction: column;   /* lets us reorder sections with `order` */
+    }
+    /* reading order: hero → About → What I Do → Featured Work */
+    .hero     { order: 0; }
+    .about    { order: 1; }
+    .services { order: 2; }
+    .work     { order: 3; }
+    .status {
+      position: absolute;
+      top: 2.5rem; right: 4rem;
+      display: flex; align-items: center; gap: 10px;
+      color: var(--muted);
+      font-size: 0.85rem;
+      letter-spacing: 0.12em;
+    }
+    .status .dot {
+      width: 9px; height: 9px; border-radius: 50%;
+      background: #22c55e;
+    }
+
+    .headline {
+      font-family: "Newsreader", Georgia, serif;
+      font-weight: 400;
+      font-size: clamp(2rem, 4.2vw, 3.6rem);
+      line-height: 1.15;
+      max-width: 16ch;
+      margin-top: 7rem;
+    }
+
+    /* the animated typed word — reserves a fixed slot so the rest
+       of the sentence never shifts as the word changes length */
+    .typed-wrap {
+      position: relative;
+      display: inline-block;
+      text-align: left;
+      vertical-align: top;
+    }
+    .typed-sizer { visibility: hidden; }   /* invisible longest word, just holds the width */
+    .typed-live  { position: absolute; inset: 0; white-space: nowrap; }
+
+    .typed {
+      color: var(--typed-color, #d64545);
+      font-weight: 500;
+    }
+    .comma {
+      color: var(--typed-color, #d99a00);   /* gold, follows the word */
+      font-weight: 500;
+    }
+    .cursor {
+      display: inline-block;
+      width: 2px;
+      margin-left: 2px;
+      background: var(--typed-color, #d64545);
+      animation: blink 1s steps(1) infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    /* ---------- avatar illustration, large + bleeding off the right ---------- */
+    .avatar {
+      position: absolute;
+      top: 50vh;                     /* centered to the browser window */
+      right: -230px;                 /* pushed further off = more cropped */
+      transform: translateY(-50%);   /* vertically centered */
+      width: min(768px, 55vw);       /* ~20% bigger */
+      z-index: 1;
+      pointer-events: none;
+    }
+    .avatar .face { width: 100%; height: auto; display: block; }
+    .avatar .face-near,
+    .avatar .face-wink {
+      position: absolute;
+      top: 0; left: 0;
+      opacity: 0;                 /* fade in on top; normal face stays solid underneath */
+      transition: opacity 0.15s ease;
+      will-change: opacity;       /* composite on GPU = smooth, no stutter */
+    }
+    .avatar.is-near   .face-near { opacity: 1; }   /* cursor nearby → tongue-out */
+    .avatar.is-pressed .face-wink { opacity: 1; }  /* mouse held → wink (sits on top) */
+    @media (max-width: 1050px) { .avatar { display: none; } }
+
+    /* ---------- hero wrapper (reserves the first screen) ---------- */
+    .hero {
+      min-height: calc(100vh - 5rem);
+      display: flex;
+      align-items: center;
+    }
+    .hero .headline { margin-top: 0; }    /* hero centers it now */
+
+    /* ---------- Featured Work section ---------- */
+    .work {
+      position: relative;
+      z-index: 2;                 /* paints over the hero avatar where they meet */
+      background: var(--bg);
+      padding-top: 7rem;          /* more breathing room after the hero */
+      padding-bottom: 6rem;
+    }
+    .featured {
+      font-family: "Newsreader", Georgia, serif;
+      font-size: clamp(1.6rem, 3vw, 2.4rem);
+      margin-bottom: 4rem;
+    }
+    /* a category groups a couple of related projects (Design / Photography) */
+    .category-group + .category-group { margin-top: 5.5rem; }
+    .category {
+      position: relative;
+      font-family: "Newsreader", Georgia, serif;
+      font-size: 1.5rem;
+      color: var(--blue);
+      margin-bottom: 2.5rem;
+      padding-bottom: 0.7rem;
+      border-bottom: 1px solid var(--line);
+    }
+    .category::after {              /* short gold accent under the heading */
+      content: "";
+      position: absolute;
+      left: 0; bottom: -1px;
+      width: 48px; height: 3px;
+      background: #d99a00;
+    }
+    .projects {
+      display: flex;
+      flex-direction: column;
+      gap: 5rem;
+    }
+    .project {
+      display: grid;
+      grid-template-columns: minmax(220px, 300px) 1fr;
+      gap: 3rem;
+      align-items: start;
+      cursor: pointer;
+    }
+    .project-title {
+      display: flex;
+      align-items: baseline;
+      gap: 0.7rem;
+      font-weight: 600;
+      font-size: 1.35rem;
+      color: var(--blue);
+      margin-bottom: 1rem;
+    }
+    .p-num {                          /* little index number, like the nav */
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #b9bec9;
+      transition: color 0.25s ease;
+    }
+    .p-label { position: relative; }
+    .p-label::after {                 /* gold underline that sweeps in on hover */
+      content: "";
+      position: absolute;
+      left: 0; bottom: -4px;
+      width: 100%; height: 2px;
+      background: #d99a00;
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.3s ease;
+    }
+    .project:hover .p-num { color: #d99a00; }
+    .project:hover .p-label::after { transform: scaleX(1); }
+    .project-desc {
+      color: var(--blue);
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+    .project-desc strong { font-weight: 600; color: var(--blue); }
+    .project-desc em {
+      font-family: "Newsreader", Georgia, serif;
+      font-style: italic;
+      color: #d99a00;               /* gold accent phrase */
+    }
+    .tags {
+      margin-top: 1.4rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+    .tag { color: #8a8f98; font-size: 0.95rem; }
+    .tag .hash { color: #d9603b; margin-right: 3px; }   /* coral # */
+
+    /* project images — placeholders for now (swap in real images later) */
+    .thumb {
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      border-radius: 6px;
+      background-size: cover;
+      background-position: center;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .project:hover .thumb {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.10);
+    }
+    /* gradient placeholders — shown only when a category folder has no photos yet */
+    .thumb-1 { background: radial-gradient(120% 120% at 72% 62%, #e06a5a 0%, #f0cabf 44%, #f5ece6 78%); }
+    .thumb-2 { background: linear-gradient(135deg, #f0ede7 0%, #e4e0d8 60%, #d9d4ca 100%); }
+    .thumb-3 { background: linear-gradient(135deg, #e8d5b5 0%, #c79c6d 60%, #a97e50 100%); }
+    .thumb-4 { background: linear-gradient(135deg, #b7cce6 0%, #7f9fc9 55%, #55719e 100%); }
+
+    /* photo gallery — auto-filled from each category's folder */
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 12px;
+    }
+    .gallery img {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      object-fit: cover;
+      border-radius: 6px;
+      display: block;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .gallery img:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+    }
+
+    /* ---------- editorial photo collections ---------- */
+    .collection { margin-top: 3.5rem; }
+    .collection:first-of-type { margin-top: 0.5rem; }
+    .collection-title {
+      font-family: "Newsreader", Georgia, serif;
+      font-size: 1.6rem;
+      color: var(--blue);
+      margin-bottom: 0.4rem;
+    }
+    .collection-desc {
+      color: var(--blue);
+      line-height: 1.6;
+      max-width: 54ch;
+    }
+    .collection-desc strong { font-weight: 600; }
+    .collection-desc em {
+      font-family: "Newsreader", Georgia, serif;
+      font-style: italic;
+      color: #d99a00;
+    }
+
+    /* nested sub-collections: Convocation / Street & Moments → client names */
+    .subcollection { margin-top: 2.6rem; }
+    .subcollection.depth-1 > .sub-label {
+      position: relative;
+      font-family: "Newsreader", Georgia, serif;
+      font-size: 1.25rem;
+      color: var(--blue);
+      padding-bottom: 0.5rem;
+      margin-bottom: 1.1rem;
+      border-bottom: 1px solid var(--line);
+    }
+    .subcollection.depth-1 > .sub-label::after {
+      content: ""; position: absolute; left: 0; bottom: -1px;
+      width: 34px; height: 3px; background: #d99a00;
+    }
+    .subcollection.depth-2 { margin-top: 1.8rem; }
+    .subcollection.depth-2 > .sub-label {
+      font-size: 0.75rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      font-weight: 600;
+      color: #d99a00;
+      margin-bottom: 0.7rem;
+    }
+
+    /* ===== cover cards (clean, image-forward — label top-left, meta top-right) ===== */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+      margin-top: 1.1rem;
+    }
+    .set-card {
+      position: relative;
+      display: block;
+      width: 100%;
+      padding: 0; border: none;
+      border-radius: 8px;
+      overflow: hidden;
+      aspect-ratio: 5 / 4;
+      cursor: pointer;
+      background: #e9e7e2;
+      font: inherit; color: #fff;
+    }
+    .set-cover {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .set-cover.loaded { opacity: 1; }
+    .set-card:hover .set-cover { transform: scale(1.05); }
+    .set-card::before {               /* soft top shade for label legibility */
+      content: ""; position: absolute; inset: 0; z-index: 1;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 34%);
+    }
+    .set-top {
+      position: absolute; top: 15px; left: 17px; right: 17px; z-index: 2;
+      display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;
+    }
+    .set-name {
+      font-weight: 600; font-size: 0.95rem;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      text-shadow: 0 1px 8px rgba(0,0,0,0.45);
+    }
+    .set-label {
+      font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase;
+      opacity: 0.92; white-space: nowrap;
+      text-shadow: 0 1px 8px rgba(0,0,0,0.45);
+    }
+
+    /* ===== mosaic preview (for a single-set category like Analog) ===== */
+    .mosaic {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(2, 1fr);
+      gap: 10px;
+      aspect-ratio: 2 / 1;
+      margin-top: 1.1rem;
+    }
+    .mosaic .tile {
+      position: relative; overflow: hidden;
+      border-radius: 6px; cursor: pointer;
+    }
+    .mosaic .tile:first-child { grid-column: span 2; grid-row: span 2; }
+    .mosaic .tile img {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+      opacity: 0; transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .mosaic .tile img.loaded { opacity: 1; }
+    .mosaic .tile:hover img { transform: scale(1.07); }
+    .mosaic .more {
+      position: absolute; inset: 0; z-index: 1;
+      background: rgba(15,15,18,0.5);
+      color: #fff; display: flex; align-items: center; justify-content: center;
+      font-weight: 600; letter-spacing: 0.05em; font-size: 1.05rem;
+      transition: background 0.3s ease;
+    }
+    .mosaic .tile:hover .more { background: rgba(15,15,18,0.32); }
+    @media (max-width: 800px) {
+      .mosaic { grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(2, 1fr); aspect-ratio: 1 / 1; }
+      .mosaic .tile:first-child { grid-column: span 2; grid-row: span 1; }
+    }
+
+    /* full-screen lightbox */
+    .lightbox {
+      position: fixed; inset: 0; z-index: 100;
+      background: rgba(15, 15, 18, 0.94);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .lightbox[hidden] { display: none; }
+    .lb-img {
+      max-width: 88vw; max-height: 86vh;
+      object-fit: contain; border-radius: 4px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+      cursor: pointer;                 /* click the photo = next */
+    }
+    @keyframes lbIn { from { opacity: 0; transform: scale(0.985); } to { opacity: 1; transform: scale(1); } }
+    .lb-img.lb-anim { animation: lbIn 0.35s ease; }
+    @keyframes lbFade { from { opacity: 0; } to { opacity: 1; } }
+    .lightbox:not([hidden]) { animation: lbFade 0.25s ease; }
+    .lb-close, .lb-prev, .lb-next {
+      position: fixed; background: rgba(255,255,255,0.12);
+      color: #fff; border: none; cursor: pointer;
+      width: 48px; height: 48px; border-radius: 50%;
+      font-size: 1.7rem; line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.2s ease;
+    }
+    .lb-close:hover, .lb-prev:hover, .lb-next:hover { background: rgba(255,255,255,0.28); }
+    .lb-close { top: 22px; right: 24px; }
+    .lb-prev { left: 24px; top: 50%; transform: translateY(-50%); }
+    .lb-next { right: 24px; top: 50%; transform: translateY(-50%); }
+    .lb-counter {
+      position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
+      color: #fff; font-size: 0.85rem; letter-spacing: 0.05em;
+      background: rgba(255,255,255,0.12); padding: 6px 14px; border-radius: 999px;
+    }
+    @media (max-width: 800px) {
+      .lb-prev { left: 8px; } .lb-next { right: 8px; }
+    }
+
+    /* ===== gallery overlay (whole set as a grid, in our light style) ===== */
+    .gallery-modal {
+      position: fixed; inset: 0; z-index: 90;
+      background: var(--bg);
+      overflow-y: auto;
+      animation: gmIn 0.3s ease;
+    }
+    .gallery-modal[hidden] { display: none; }
+    @keyframes gmIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+    .gm-bar {
+      position: sticky; top: 0; z-index: 2;
+      display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem;
+      padding: 1.6rem 2.5rem 1.1rem;
+      background: var(--bg);
+      border-bottom: 1px solid var(--line);
+    }
+    .gm-title { display: flex; align-items: baseline; gap: 0.9rem; }
+    .gm-name {
+      position: relative;
+      font-family: "Newsreader", Georgia, serif;
+      font-size: 1.8rem; color: var(--blue);
+      padding-bottom: 0.35rem;
+    }
+    .gm-name::after {
+      content: ""; position: absolute; left: 0; bottom: 0;
+      width: 34px; height: 3px; background: #d99a00;
+    }
+    .gm-count { font-size: 0.85rem; color: var(--muted); letter-spacing: 0.06em; }
+    .gm-close {
+      background: none; border: none; cursor: pointer;
+      font-size: 2rem; line-height: 1; color: var(--blue);
+      width: 44px; height: 44px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.2s ease;
+    }
+    .gm-close:hover { background: #eceae4; }
+
+    .gm-grid {                          /* masonry: uniform columns, natural heights */
+      column-width: 250px;
+      column-gap: 12px;
+      padding: 1.6rem 2rem 3.5rem;
+    }
+    .gm-grid img {
+      width: 100%; display: block; margin: 0 0 12px;
+      border-radius: 6px; break-inside: avoid;
+      cursor: zoom-in;
+      opacity: 0;
+      transition: opacity 0.5s ease, transform 0.35s ease, box-shadow 0.35s ease;
+    }
+    .gm-grid img.loaded { opacity: 1; }
+    .gm-grid img:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(0,0,0,0.14); }
+
+    @media (max-width: 800px) {
+      .gm-bar { padding: 1.2rem 1.2rem 1rem; }
+      .gm-name { font-size: 1.4rem; }
+      .gm-grid { padding: 1.2rem 1rem 3rem; column-width: 150px; column-gap: 8px; }
+      .gm-grid img { margin-bottom: 8px; }
+    }
+
+    /* ===== What I Do (services) ===== */
+    .services {
+      position: relative;
+      z-index: 2;
+      background:
+        radial-gradient(#d3d7e1 1.2px, transparent 1.4px) 0 0 / 24px 24px,
+        var(--bg);
+    }
+    .services-scroll { height: 240vh; }      /* tall track = how long the pin lasts */
+    .services-pin {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+    .services-title {
+      font-family: "Newsreader", Georgia, serif;
+      font-size: clamp(1.8rem, 3.2vw, 2.6rem);
+      color: var(--blue);
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+    .cards {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+    /* slot = position/rotation (scrubbed by scroll); card = the note itself */
+    .do-slot {
+      flex: 0 0 296px;
+      will-change: transform;
+    }
+    /* DEFAULT = stacked into one note; outer notes hide behind the middle */
+    .do-slot--1 { transform: translateX(296px)  translateY(62px) rotate(0deg) scale(0.96); z-index: 2; }
+    .do-slot--2 { transform: translateX(0)      translateY(62px) rotate(0deg);             z-index: 3; }
+    .do-slot--3 { transform: translateX(-296px) translateY(62px) rotate(0deg) scale(0.97); z-index: 1; }
+    .do-slot:hover { z-index: 6; }
+
+    .do-card {
+      width: 100%;
+      background: #fdfdfc;
+      border: 1.5px solid #6b84d6;
+      border-radius: 3px;
+      padding: 2rem 1.8rem 2.2rem;
+      position: relative;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .do-card:hover {                      /* lift on hover */
+      transform: translateY(-8px) scale(1.02);
+      box-shadow: 0 16px 40px rgba(47, 79, 181, 0.16);
+    }
+    .do-name {
+      font-weight: 600;
+      font-size: 1.25rem;
+      color: var(--blue);
+      padding-bottom: 0.7rem;
+      margin-bottom: 1.1rem;
+      border-bottom: 1.5px solid #6b84d6;
+    }
+    .do-list { list-style: none; display: flex; flex-direction: column; gap: 0.7rem; }
+    .do-list li {
+      position: relative;
+      padding-left: 1.6rem;
+      color: var(--blue-soft);
+      font-size: 1rem;
+    }
+    .do-list li::before {
+      content: "\2727";                    /* ✧ sparkle bullet */
+      position: absolute; left: 0; top: 0;
+      color: #6b84d6;
+    }
+    .do-icon {
+      position: absolute;
+      top: -30px; right: -22px;
+      width: 78px; height: 78px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(217,154,0,0.18), rgba(217,154,0,0) 66%);
+    }
+    .do-icon img { width: 100%; height: 100%; object-fit: contain; }
+
+    @media (max-width: 900px) {
+      .services-scroll { height: auto; }
+      .services-pin { position: static; height: auto; padding: 4.5rem 0; }
+      .cards { flex-direction: column; align-items: center; gap: 2.6rem; }
+      .do-slot {
+        transform: none !important;
+        flex: 0 0 auto; width: min(340px, 88%);
+      }
+    }
+
+    /* ===== About Me ===== */
+    .about {
+      position: relative;
+      z-index: 2;
+      padding: 6.5rem 0 7rem;
+      overflow: hidden;                 /* clip anything that floats past the edges */
+      background:
+        linear-gradient(rgba(47,79,181,0.05) 1px, transparent 1px) 0 0 / 36px 36px,
+        linear-gradient(90deg, rgba(47,79,181,0.05) 1px, transparent 1px) 0 0 / 36px 36px,
+        var(--bg);
+    }
+    .about-inner { position: relative; max-width: 720px; margin: 0 auto; padding: 0 1rem; }
+    .about-card {
+      position: relative; z-index: 2;
+      max-width: 460px; margin: 0 auto;
+      background: #fff;
+      border-radius: 22px;
+      padding: 2.6rem 2.4rem 2.8rem;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.07);
+      text-align: center;
+    }
+    .about-title {
+      font-family: "Newsreader", Georgia, serif;
+      font-size: 2.2rem; color: var(--blue);
+    }
+    .about-sub { color: var(--blue-soft); margin: 0.5rem 0 1.8rem; font-size: 1.02rem; }
+    .about-photo { border-radius: 14px; overflow: hidden; }
+    .about-photo img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; display: block; }
+
+    /* scattered cameras: wrapper does scroll-parallax, img does a gentle float */
+    .cam-wrap {
+      position: absolute; z-index: 3;
+      pointer-events: none;
+      will-change: transform;
+    }
+    .cam-wrap img {
+      display: block; width: 100%; height: auto;
+      filter: drop-shadow(0 12px 18px rgba(0,0,0,0.18));
+      animation: floaty 5.5s ease-in-out infinite;
+    }
+    @keyframes floaty {
+      0%, 100% { transform: translateY(0)    rotate(var(--r, 0deg)); }
+      50%      { transform: translateY(-9px) rotate(var(--r, 0deg)); }
+    }
+    /* positions are relative to the card, so they hug the photo */
+    .cam--1 { --r: 9deg;   top: -30px;    right: -40px; width: 158px; }
+    .cam--2 { --r: -11deg; bottom: -30px; left: -40px;  width: 146px; }
+    .cam--3 { --r: -7deg;  top: 36%;      left: -52px;  width: 126px; }
+    .cam--4 { --r: 13deg;  bottom: 30%;   right: -54px; width: 136px; }
+    .cam--1 img { animation-delay: 0s; }
+    .cam--2 img { animation-delay: 0.8s; }
+    .cam--3 img { animation-delay: 1.6s; }
+    .cam--4 img { animation-delay: 2.2s; }
+
+    @media (max-width: 760px) {
+      .about { padding: 4.5rem 0 5rem; }
+      .cam-wrap { width: 84px !important; }
+      .cam-wrap img { filter: drop-shadow(0 6px 10px rgba(0,0,0,0.16)); }
+      .cam--1 { top: -14px; right: -10px; }
+      .cam--2 { bottom: -14px; left: -10px; }
+      .cam--3 { top: 40%; left: -8px; }
+      .cam--4 { bottom: 32%; right: -8px; }
+    }
+
+    /* ---------- soft blend-in on scroll ---------- */
+    .reveal {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 1s cubic-bezier(0.22, 1, 0.36, 1),
+                  transform 1s cubic-bezier(0.22, 1, 0.36, 1);
+      will-change: opacity, transform;
+    }
+    .reveal.in { opacity: 1; transform: none; }
+    @media (prefers-reduced-motion: reduce) {
+      .reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+    }
+
+    /* ===== Contact / footer ===== */
+    .contact {
+      order: 4;                    /* last section */
+      position: relative; z-index: 2;
+      background: var(--bg);
+      padding: 3rem 0 2.5rem;
+    }
+    .contact-gallery {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      align-items: start;
+      gap: 1.2rem;
+      margin-bottom: 3.5rem;
+    }
+    .cg {                               /* reserved slot — keeps layout from jumping */
+      aspect-ratio: 4 / 5;
+      display: flex; align-items: center;
+    }
+    .cg-frame {                         /* visible tile — morphs shape to fit the photo */
+      position: relative;
+      width: 100%;
+      height: 0;
+      padding-bottom: 125%;             /* portrait 4:5 (default) */
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+      background: #eceae4;
+      transition: padding-bottom 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .cg-frame.landscape { padding-bottom: 75%; }   /* landscape 4:3 */
+    .cg-img {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      transform: scale(1.07);
+      transition: opacity 0.9s ease, transform 3.4s ease;
+      will-change: opacity, transform;
+    }
+    .cg-img.show { opacity: 1; transform: scale(1); }
+
+    .contact-main {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      gap: 2rem; padding-bottom: 2.4rem;
+      border-bottom: 1px solid var(--line);
+    }
+    .contact-name {
+      font-family: "Inter", sans-serif;
+      font-weight: 800;
+      font-size: clamp(2.6rem, 8vw, 6.5rem);
+      line-height: 0.95;
+      letter-spacing: -0.02em;
+      color: var(--blue);
+      max-width: 11ch;
+    }
+    .contact-links {
+      display: flex; flex-direction: column; gap: 0.6rem;
+      flex-shrink: 0; align-items: flex-end; padding-top: 0.4rem;
+    }
+    .contact-links a {
+      color: var(--blue-soft); text-decoration: none;
+      font-size: 1.05rem; position: relative; width: fit-content;
+      transition: color 0.2s ease;
+    }
+    .contact-links a::after {
+      content: ""; position: absolute; left: 0; right: 0; bottom: -2px; height: 1.5px;
+      background: #d99a00; transform: scaleX(0); transform-origin: right;
+      transition: transform 0.25s ease;
+    }
+    .contact-links a:hover { color: var(--blue); }
+    .contact-links a:hover::after { transform: scaleX(1); transform-origin: left; }
+
+    .contact-foot { margin-top: 1.4rem; color: var(--muted); font-size: 0.85rem; }
+
+    @media (max-width: 760px) {
+      .contact-main { flex-direction: column; }
+      .contact-links { align-items: flex-start; }
+      .contact-gallery { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* ---------- make it work on phones ---------- */
+    @media (max-width: 800px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--line); }
+      .bio { margin-top: 2rem; }
+      .main { padding: 2rem 1.5rem; }
+      .status { position: static; margin-bottom: 2rem; }
+      .headline { margin-top: 2rem; }
+      .hero { min-height: auto; padding: 3rem 0; }
+      .project { grid-template-columns: 1fr; gap: 1.2rem; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- soft glow that follows the cursor -->
+  <div class="glow" id="glow"></div>
+
+  <div class="layout">
+
+    <!-- ===== LEFT SIDEBAR ===== -->
+    <aside class="sidebar">
+      <div class="brand">
+        <img src="images/About%20me/me.jpg" alt="Naffi" />
+        Ahmad Naffi Firdaus
+      </div>
+
+      <nav class="nav">
+        <a href="#about"><span class="label">About</span></a>
+        <a href="#services"><span class="label">Services</span></a>
+        <a href="#works"><span class="label">Works</span></a>
+        <a href="#contact"><span class="label">Contact</span></a>
+      </nav>
+
+      <p class="bio">
+        A <strong>designer</strong> &amp; <strong>photographer</strong> who captures
+        authenticity. From brand identities to
+        <em>unposed, unfiltered emotion.</em>
+      </p>
+
+      <div class="socials">
+        <a href="mailto:ahmadnaffif@gmail.com" aria-label="Email">✉</a>
+        <a href="#" aria-label="LinkedIn">in</a>
+        <a href="#" aria-label="Instagram">◎</a>
+      </div>
+    </aside>
+
+    <!-- ===== MAIN CONTENT ===== -->
+    <main class="main">
+      <section class="hero">
+        <h1 class="headline">
+          Hi, I'm Naffi, a <span class="typed-wrap"><span class="typed-sizer">visual_storyteller,</span><span class="typed-live"><span class="typed" id="typed"></span><span class="comma">,</span><span class="cursor" id="cursor">&nbsp;</span></span></span>
+          who finds the story hiding behind every pose
+        </h1>
+      </section>
+
+      <!-- ===== AVATAR ILLUSTRATION (reacts to the cursor) ===== -->
+      <div class="avatar" id="avatar">
+        <img class="face face-normal" src="avatar.png" alt="Illustration of Naffi" />
+        <img class="face face-near" src="avatar-near.png" alt="" />
+        <img class="face face-wink" src="avatar-wink.png" alt="" />
+      </div>
+
+      <!-- ===== FEATURED WORK ===== -->
+      <section class="work" id="works">
+        <h2 class="featured">Featured Work</h2>
+
+        <!-- ===== PHOTOGRAPHY ===== -->
+        <div class="category-group">
+          <h3 class="category">Photography</h3>
+
+          <div class="collection">
+            <h4 class="collection-title">Analog</h4>
+            <p class="collection-desc">
+              <strong>Film</strong> — grain, natural light, and
+              <em>random moments &amp; memories</em> caught on 35mm.
+            </p>
+            <div class="photo-set" data-node="analog"></div>
+          </div>
+
+          <div class="collection">
+            <h4 class="collection-title">Digital</h4>
+            <p class="collection-desc">
+              <strong>Digital</strong> captures — <em>client stories</em> and
+              unscripted frames from the street.
+            </p>
+            <div class="photo-set" data-node="digital"></div>
+          </div>
+        </div>
+
+        <!-- ===== DESIGN ===== -->
+        <div class="category-group">
+          <h3 class="category">Design</h3>
+          <div class="projects">
+            <article class="project">
+              <div class="project-info">
+                <h3 class="project-title"><span class="p-num">01</span><span class="p-label">Logos</span></h3>
+                <p class="project-desc">
+                  Distinctive <strong>logo systems</strong> and <strong>brand marks</strong> —
+                  built for <em>clarity, character, and instant recognition.</em>
+                </p>
+                <div class="tags">
+                  <span class="tag"><span class="hash">#</span>Branding</span>
+                  <span class="tag"><span class="hash">#</span>Identity</span>
+                </div>
+              </div>
+              <div class="gallery" data-folder="images/logos" data-fallback="thumb-1"></div>
+            </article>
+
+            <article class="project">
+              <div class="project-info">
+                <h3 class="project-title"><span class="p-num">02</span><span class="p-label">Social Media Posts</span></h3>
+                <p class="project-desc">
+                  Scroll-stopping <strong>social content</strong> — post series, campaigns,
+                  and templates that keep a brand <em>consistent and alive.</em>
+                </p>
+                <div class="tags">
+                  <span class="tag"><span class="hash">#</span>Content design</span>
+                  <span class="tag"><span class="hash">#</span>Layout</span>
+                </div>
+              </div>
+              <div class="gallery" data-folder="images/social" data-fallback="thumb-2"></div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== WHAT I DO (services) ===== -->
+      <section class="services" id="services">
+        <div class="services-scroll">
+          <div class="services-pin">
+            <h2 class="services-title">What I Do</h2>
+            <div class="cards">
+
+          <div class="do-slot do-slot--1">
+            <article class="do-card">
+              <span class="do-icon">
+                <img src="images/What%20i%20Do/Photography.png" alt="" />
+              </span>
+              <h3 class="do-name">Photography</h3>
+              <ul class="do-list">
+                <li>Portraits &amp; convocation</li>
+                <li>Street &amp; candid moments</li>
+                <li>Analog &middot; 35mm film</li>
+                <li>Event coverage</li>
+              </ul>
+            </article>
+          </div>
+
+          <div class="do-slot do-slot--2">
+            <article class="do-card">
+              <span class="do-icon">
+                <img src="images/What%20i%20Do/Graphic%20Design.png" alt="" />
+              </span>
+              <h3 class="do-name">Graphic Design</h3>
+              <ul class="do-list">
+                <li>Logo &amp; visual identity</li>
+                <li>Social media assets</li>
+                <li>Brand collateral</li>
+                <li>Posters &amp; layout</li>
+                <li>Packaging</li>
+              </ul>
+            </article>
+          </div>
+
+          <div class="do-slot do-slot--3">
+            <article class="do-card">
+              <span class="do-icon">
+                <img src="images/What%20i%20Do/Content%20Generation.png" alt="" />
+              </span>
+              <h3 class="do-name">Content Generation</h3>
+              <ul class="do-list">
+                <li>AI content generation</li>
+                <li>Prompt engineering</li>
+                <li>Reels &amp; short-form video</li>
+                <li>Photo editing &amp; retouch</li>
+                <li>Captions &amp; copy</li>
+              </ul>
+            </article>
+          </div>
+
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== ABOUT ME ===== -->
+      <section class="about" id="about">
+        <div class="about-card">
+          <h2 class="about-title">About Me</h2>
+          <p class="about-sub">Designer &amp; photographer — chasing light &amp; honest moments.</p>
+          <div class="about-photo">
+            <img src="images/About%20me/me.jpg" alt="Naffi" />
+          </div>
+
+          <div class="cam-wrap cam--1"><img src="images/About%20me/cam1.png" alt="" /></div>
+          <div class="cam-wrap cam--2"><img src="images/About%20me/cam2.png" alt="" /></div>
+          <div class="cam-wrap cam--3"><img src="images/About%20me/cam3.png" alt="" /></div>
+          <div class="cam-wrap cam--4"><img src="images/About%20me/cam4.png" alt="" /></div>
+        </div>
+      </section>
+
+      <!-- ===== CONTACT ===== -->
+      <section class="contact" id="contact">
+        <div class="contact-gallery">
+          <div class="cg"><div class="cg-frame"><img class="cg-img" alt="" /><img class="cg-img" alt="" /></div></div>
+          <div class="cg"><div class="cg-frame"><img class="cg-img" alt="" /><img class="cg-img" alt="" /></div></div>
+          <div class="cg"><div class="cg-frame"><img class="cg-img" alt="" /><img class="cg-img" alt="" /></div></div>
+          <div class="cg"><div class="cg-frame"><img class="cg-img" alt="" /><img class="cg-img" alt="" /></div></div>
+        </div>
+        <div class="contact-main">
+          <h2 class="contact-name">Ahmad Naffi Firdaus</h2>
+          <div class="contact-links">
+            <a href="mailto:ahmadnaffif@gmail.com">Email</a>
+            <a href="#" target="_blank" rel="noopener">Instagram</a>
+            <a href="#" target="_blank" rel="noopener">LinkedIn</a>
+            <a href="#" target="_blank" rel="noopener">Resume</a>
+          </div>
+        </div>
+        <p class="contact-foot">© 2026 Ahmad Naffi Firdaus</p>
+      </section>
+    </main>
+  </div>
+
+  <!-- gallery overlay: shows a whole set as a grid -->
+  <div class="gallery-modal" id="galleryModal" hidden>
+    <div class="gm-bar">
+      <div class="gm-title">
+        <span class="gm-name" id="gmName"></span>
+        <span class="gm-count" id="gmCount"></span>
+      </div>
+      <button class="gm-close" id="gmClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="gm-grid" id="gmGrid"></div>
+  </div>
+
+  <!-- full-screen single-photo viewer (opens when you click a photo in the grid) -->
+  <div class="lightbox" id="lightbox" hidden>
+    <button class="lb-close" aria-label="Close">&times;</button>
+    <button class="lb-prev" aria-label="Previous">&#8249;</button>
+    <img class="lb-img" id="lbImg" alt="" />
+    <button class="lb-next" aria-label="Next">&#8250;</button>
+    <div class="lb-counter" id="lbCounter"></div>
+  </div>
+
+  <!-- the image index generated by build_gallery.py -->
+  <script src="gallery-data.js"></script>
+
+  <script>
+    /* ===== TYPEWRITER EFFECT =====
+       Each role has its own color. The word types out, pauses,
+       deletes, then the next word (in a new color) types out. */
+    const roles = [
+      { text: "visual_storyteller", color: "#d99a00" },
+      { text: "candid_alchemist",   color: "#d99a00" },
+      { text: "art_director",       color: "#d99a00" },
+      { text: "emotion_chaser",     color: "#d99a00" },
+    ];
+
+    const typedEl  = document.getElementById("typed");
+    const root     = document.documentElement;
+
+    let roleIndex = 0;   // which word we're on
+    let charIndex = 0;   // how many letters are shown
+    let deleting  = false;
+
+    function tick() {
+      const role = roles[roleIndex];
+
+      // set the color for the current word
+      root.style.setProperty("--typed-color", role.color);
+
+      // show more (or fewer) letters
+      typedEl.textContent = role.text.slice(0, charIndex);
+
+      if (!deleting) {
+        charIndex++;
+        if (charIndex > role.text.length) {
+          deleting = true;
+          return setTimeout(tick, 1400);   // pause when fully typed
+        }
+      } else {
+        charIndex--;
+        if (charIndex === 0) {
+          deleting = false;
+          roleIndex = (roleIndex + 1) % roles.length; // next word
+        }
+      }
+
+      // typing is slower than deleting, feels more natural
+      setTimeout(tick, deleting ? 45 : 90);
+    }
+
+    tick();
+
+    /* ===== CURSOR-FOLLOWING GLOW =====
+       The glow eases toward the mouse (a little lag = smooth, premium feel). */
+    const glow = document.getElementById("glow");
+    let mouseX = window.innerWidth / 2, mouseY = window.innerHeight / 2;
+    let glowX = mouseX, glowY = mouseY;
+
+    let idleTimer;
+    window.addEventListener("mousemove", (e) => {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+      glow.style.opacity = 1;          // reveal on movement
+
+      // hide the glow after 2 seconds of no movement (AFK)
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => { glow.style.opacity = 0; }, 2000);
+    });
+    // fade out when the mouse leaves the window
+    document.addEventListener("mouseleave", () => { glow.style.opacity = 0; });
+
+    function moveGlow() {
+      glowX += (mouseX - glowX) * 0.12;   // 0.12 = how quickly it catches up
+      glowY += (mouseY - glowY) * 0.12;
+      glow.style.left = glowX + "px";
+      glow.style.top  = glowY + "px";
+      requestAnimationFrame(moveGlow);
+    }
+    moveGlow();
+
+    /* ===== WINK WHILE THE MOUSE IS HELD DOWN ===== */
+    const avatar = document.getElementById("avatar");
+    const wink   = () => avatar.classList.add("is-pressed");
+    const unwink = () => avatar.classList.remove("is-pressed");
+
+    document.addEventListener("mousedown", wink);
+    document.addEventListener("mouseup", unwink);
+    window.addEventListener("blur", unwink);          // reset if focus is lost mid-hold
+    // touch screens
+    document.addEventListener("touchstart", wink, { passive: true });
+    document.addEventListener("touchend", unwink);
+
+    /* ===== TONGUE-OUT WHEN THE CURSOR IS NEAR ===== */
+    const NEAR = 160;   // how close (in px) counts as "near"
+    // the head art fills this fraction of the frame (from the PNG's content bounds)
+    const BOX = { x0: 0.189, y0: 0.234, x1: 0.8245, y1: 0.7995 };
+
+    window.addEventListener("mousemove", (e) => {
+      const r = avatar.getBoundingClientRect();
+      if (!r.width) return;                           // hidden on small screens
+      const cx0 = r.left + BOX.x0 * r.width,  cx1 = r.left + BOX.x1 * r.width;
+      const cy0 = r.top  + BOX.y0 * r.height, cy1 = r.top  + BOX.y1 * r.height;
+      // distance from the cursor to the head's box (0 if inside)
+      const dx = Math.max(cx0 - e.clientX, 0, e.clientX - cx1);
+      const dy = Math.max(cy0 - e.clientY, 0, e.clientY - cy1);
+      avatar.classList.toggle("is-near", Math.hypot(dx, dy) < NEAR);
+    });
+    document.addEventListener("mouseleave", () => avatar.classList.remove("is-near"));
+
+    /* ===== AUTO-FILL EACH GALLERY FROM ITS FOLDER =====
+       Name photos 1.jpg, 2.jpg, 3.jpg ... (or .png) in the category folder.
+       It loads them in order and stops at the first missing number. */
+    function canLoad(src) {
+      return new Promise((res) => {
+        const im = new Image();
+        im.onload = () => res(true);
+        im.onerror = () => res(false);
+        im.src = src;
+      });
+    }
+
+    async function fillGallery(box) {
+      const folder = box.dataset.folder;
+      const exts = ["jpg", "jpeg", "png", "webp"];
+      let i = 1;
+      while (i <= 40) {                       // safety cap
+        let found = null;
+        for (const ext of exts) {
+          const src = `${folder}/${i}.${ext}`;
+          if (await canLoad(src)) { found = src; break; }
+        }
+        if (!found) break;                    // stop at the first gap
+        const img = document.createElement("img");
+        img.src = found;
+        img.alt = "";
+        img.loading = "lazy";
+        box.appendChild(img);
+        i++;
+      }
+      // nothing in the folder yet → show the gradient placeholder
+      if (!box.children.length) {
+        box.innerHTML = `<div class="thumb ${box.dataset.fallback}"></div>`;
+      }
+    }
+
+    document.querySelectorAll(".gallery").forEach(fillGallery);
+
+    /* ===== PHOTO COLLECTIONS AS CLICKABLE CARDS (from gallery-data.js) ===== */
+    function galEl(tag, cls) {
+      const e = document.createElement(tag);
+      if (cls) e.className = cls;
+      return e;
+    }
+
+    // a "set" is a folder that holds photos directly (no sub-folders)
+    function isSet(node) {
+      return node.images && node.images.length &&
+             !(node.folders && Object.keys(node.folders).length);
+    }
+
+    function countLabel(n) {
+      return n + (n === 1 ? " photo" : " photos");
+    }
+
+    function makeCard(images, title) {
+      const card = galEl("button", "set-card");
+      card.type = "button";
+
+      const cover = document.createElement("img");
+      cover.className = "set-cover";
+      cover.loading = "lazy";
+      cover.alt = title || "";
+      cover.addEventListener("load", () => cover.classList.add("loaded"));
+      cover.src = encodeURI(images[0]);           // first photo = cover
+      card.appendChild(cover);
+
+      const top = galEl("span", "set-top");
+      const n = galEl("span", "set-name");
+      n.textContent = title || "Gallery";
+      const l = galEl("span", "set-label");
+      l.textContent = countLabel(images.length);
+      top.appendChild(n);
+      top.appendChild(l);
+      card.appendChild(top);
+
+      card.addEventListener("click", () => openGallery(images, title || "Gallery"));
+      return card;
+    }
+
+    // a filled preview for a single-set category: 1 big + a few small tiles
+    function makeMosaic(images, title) {
+      const m = galEl("div", "mosaic");
+      const SHOW = 5;
+      images.slice(0, SHOW).forEach((src, i) => {
+        const tile = galEl("div", "tile");
+        const img = document.createElement("img");
+        img.loading = "lazy";
+        img.alt = "";
+        img.addEventListener("load", () => img.classList.add("loaded"));
+        img.src = encodeURI(src);
+        tile.appendChild(img);
+        if (i === SHOW - 1 && images.length > SHOW) {   // "+N more" on the last tile
+          const more = galEl("div", "more");
+          more.textContent = "+" + (images.length - SHOW);
+          tile.appendChild(more);
+        }
+        tile.addEventListener("click", () => openGallery(images, title));
+        m.appendChild(tile);
+      });
+      return m;
+    }
+
+    // walk the tree: sets become cards, sub-folders become labelled sections
+    function renderNode(name, node, container, depth, topLevel) {
+      if (isSet(node)) {
+        if (topLevel) {
+          const nice = name.charAt(0).toUpperCase() + name.slice(1);
+          container.appendChild(makeMosaic(node.images, nice));   // fills the space nicely
+        } else {
+          const grid = galEl("div", "card-grid");
+          grid.appendChild(makeCard(node.images, name));
+          container.appendChild(grid);
+        }
+        return;
+      }
+      const folders = node.folders || {};
+      let grid = null;
+      const flush = () => { if (grid && grid.children.length) container.appendChild(grid); grid = null; };
+      Object.keys(folders).forEach((childName) => {
+        const child = folders[childName];
+        if (isSet(child)) {
+          if (!grid) grid = galEl("div", "card-grid");
+          grid.appendChild(makeCard(child.images, childName));
+        } else {
+          flush();
+          const sub = galEl("div", "subcollection depth-" + depth);
+          const label = galEl("div", "sub-label");
+          label.textContent = childName;
+          sub.appendChild(label);
+          renderNode(childName, child, sub, depth + 1, false);
+          container.appendChild(sub);
+        }
+      });
+      flush();
+    }
+
+    document.querySelectorAll(".photo-set").forEach((box) => {
+      const node = (window.GALLERY || {})[box.dataset.node];
+      if (node) renderNode(box.dataset.node, node, box, 1, true);
+    });
+
+    /* ===== GALLERY OVERLAY + SINGLE-PHOTO VIEWER ===== */
+    const gm = document.getElementById("galleryModal");
+    const gmGrid = document.getElementById("gmGrid");
+    const gmName = document.getElementById("gmName");
+    const gmCount = document.getElementById("gmCount");
+
+    const lb = document.getElementById("lightbox");
+    const lbImg = document.getElementById("lbImg");
+    const lbCounter = document.getElementById("lbCounter");
+    let lbList = [], lbIndex = 0;
+
+    // keep the page from scrolling while any overlay is open
+    function updateScrollLock() {
+      document.body.style.overflow = (gm.hidden && lb.hidden) ? "" : "hidden";
+    }
+
+    /* -- the gallery grid (opens when you click a card/mosaic) -- */
+    function openGallery(images, title) {
+      gmName.textContent = title || "Gallery";
+      gmCount.textContent = countLabel(images.length);
+      gmGrid.innerHTML = "";
+      images.forEach((src, i) => {
+        const img = document.createElement("img");
+        img.loading = "lazy";
+        img.alt = "";
+        img.addEventListener("load", () => img.classList.add("loaded"));
+        img.src = encodeURI(src);
+        img.addEventListener("click", () => openLightbox(images, i));  // zoom a single photo
+        gmGrid.appendChild(img);
+      });
+      gm.scrollTop = 0;
+      gm.hidden = false;
+      updateScrollLock();
+    }
+    function closeGallery() { gm.hidden = true; updateScrollLock(); }
+    document.getElementById("gmClose").addEventListener("click", closeGallery);
+
+    /* -- single-photo viewer (optional zoom from the grid) -- */
+    function showLb() {
+      lbImg.classList.remove("lb-anim");
+      void lbImg.offsetWidth;                 // restart the entrance animation
+      lbImg.src = encodeURI(lbList[lbIndex]);
+      lbImg.classList.add("lb-anim");
+      lbCounter.textContent = (lbIndex + 1) + " / " + lbList.length;
+    }
+    function openLightbox(images, i) {
+      lbList = images; lbIndex = i;
+      lb.hidden = false;
+      updateScrollLock();
+      showLb();
+    }
+    function closeLightbox() { lb.hidden = true; updateScrollLock(); }
+    function lbStep(d) {
+      lbIndex = (lbIndex + d + lbList.length) % lbList.length;
+      showLb();
+    }
+
+    document.querySelector(".lb-close").addEventListener("click", closeLightbox);
+    document.querySelector(".lb-prev").addEventListener("click", () => lbStep(-1));
+    document.querySelector(".lb-next").addEventListener("click", () => lbStep(1));
+    lbImg.addEventListener("click", () => lbStep(1));     // click photo = next
+    lb.addEventListener("click", (e) => { if (e.target === lb) closeLightbox(); });
+
+    document.addEventListener("keydown", (e) => {
+      if (!lb.hidden) {                       // single viewer takes priority
+        if (e.key === "Escape") closeLightbox();
+        else if (e.key === "ArrowLeft") lbStep(-1);
+        else if (e.key === "ArrowRight") lbStep(1);
+      } else if (!gm.hidden) {
+        if (e.key === "Escape") closeGallery();
+      }
+    });
+
+    /* ===== SERVICES: scrub the split by scroll (takes effort to fan into 3) ===== */
+    const cardsEl = document.querySelector(".cards");
+    const slots = Array.from(document.querySelectorAll(".do-slot"));
+    // per slot: a = stacked (start), b = fanned (end)
+    const SPLIT = [
+      { a: { x: 296,  y: 62, r: 0, s: 0.96 }, b: { x: 28,  y: 0,  r: -4, s: 1 } },
+      { a: { x: 0,    y: 62, r: 0, s: 1 },    b: { x: 0,   y: 62, r: 3,  s: 1 } },
+      { a: { x: -296, y: 62, r: 0, s: 0.97 }, b: { x: -28, y: 26, r: -2, s: 1 } },
+    ];
+    const mix = (a, b, p) => a + (b - a) * p;
+    function applySplit(p) {
+      slots.forEach((slot, i) => {
+        const q = SPLIT[i];
+        slot.style.transform =
+          "translateX(" + mix(q.a.x, q.b.x, p) + "px) " +
+          "translateY(" + mix(q.a.y, q.b.y, p) + "px) " +
+          "rotate(" + mix(q.a.r, q.b.r, p) + "deg) " +
+          "scale(" + mix(q.a.s, q.b.s, p) + ")";
+      });
+    }
+    const scroller = document.querySelector(".services-scroll");
+    function onSplitScroll() {
+      if (window.innerWidth <= 900 || !scroller) { slots.forEach((s) => (s.style.transform = "")); return; }
+      const rect = scroller.getBoundingClientRect();
+      const vh = window.innerHeight;
+      const total = scroller.offsetHeight - vh;       // scroll distance while the section is pinned
+      let p = total > 0 ? (-rect.top) / total : 0;    // 0 → 1 as you scroll through the pin
+      p = Math.max(0, Math.min(1, p));
+      applySplit(p);
+    }
+    if (cardsEl && slots.length) {
+      let ticking = false;
+      window.addEventListener("scroll", () => {
+        if (!ticking) { ticking = true; requestAnimationFrame(() => { onSplitScroll(); ticking = false; }); }
+      }, { passive: true });
+      window.addEventListener("resize", onSplitScroll);
+      onSplitScroll();
+    }
+
+    /* ===== ABOUT: cameras drift (parallax) as you scroll ===== */
+    const aboutSec = document.querySelector(".about");
+    const camWraps = Array.from(document.querySelectorAll(".cam-wrap"));
+    const CAM_PAR = [-70, 55, -95, 80];   // parallax travel per camera (varied = depth)
+    function onCamScroll() {
+      const rect = aboutSec.getBoundingClientRect();
+      const vh = window.innerHeight;
+      let t = (rect.top + rect.height / 2 - vh / 2) / vh;   // 0 when section is centered
+      t = Math.max(-1, Math.min(1, t));
+      camWraps.forEach((w, i) => {
+        w.style.transform = "translateY(" + (t * CAM_PAR[i % CAM_PAR.length]) + "px)";
+      });
+    }
+    if (aboutSec && camWraps.length) {
+      let camTick = false;
+      window.addEventListener("scroll", () => {
+        if (!camTick) { camTick = true; requestAnimationFrame(() => { onCamScroll(); camTick = false; }); }
+      }, { passive: true });
+      window.addEventListener("resize", onCamScroll);
+      onCamScroll();
+    }
+
+    /* ===== soft blend-in for About + Featured Work ===== */
+    (function () {
+      const sels = [".about-card", ".featured", ".category", ".collection", ".work .project"];
+      const els = [];
+      sels.forEach((s) => document.querySelectorAll(s).forEach((el) => els.push(el)));
+      if (!els.length) return;
+      els.forEach((el) => el.classList.add("reveal"));
+      if (!("IntersectionObserver" in window)) { els.forEach((el) => el.classList.add("in")); return; }
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach((e) => {
+          e.target.classList.toggle("in", e.isIntersecting);   // fade in AND out
+        });
+      }, { threshold: 0.1, rootMargin: "-10% 0px -10% 0px" });
+      els.forEach((el) => io.observe(el));
+    })();
+
+    /* ===== CONTACT: photo collage that cycles every 3.5s (crossfade + ken burns) ===== */
+    (function () {
+      const tiles = document.querySelectorAll(".contact-gallery .cg");
+      if (!tiles.length || !window.GALLERY) return;
+      const all = [];
+      (function walk(n) {
+        if (n.images) n.images.forEach((s) => all.push(s));
+        if (n.folders) Object.values(n.folders).forEach(walk);
+      })({ folders: window.GALLERY });
+      if (!all.length) return;
+      // shuffle for variety
+      for (let i = all.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [all[i], all[j]] = [all[j], all[i]];
+      }
+
+      tiles.forEach((tile, t) => {
+        const frame = tile.querySelector(".cg-frame");
+        const layers = frame.querySelectorAll(".cg-img");
+        let cur = 0;
+        let idx = (t * Math.ceil(all.length / tiles.length)) % all.length;  // spread starts
+
+        function apply(layer, src, isFirst) {
+          const pre = new Image();                     // preload → no flash + read orientation
+          pre.onload = () => {
+            frame.classList.toggle("landscape", pre.naturalWidth >= pre.naturalHeight);
+            layer.src = src;
+            layer.classList.remove("show");
+            void layer.offsetWidth;                    // restart the ken-burns zoom
+            layer.classList.add("show");
+            if (!isFirst) { layers[cur].classList.remove("show"); cur = 1 - cur; }
+          };
+          pre.src = src;
+        }
+
+        apply(layers[0], encodeURI(all[idx]), true);   // initial
+
+        function next() {
+          idx = (idx + tiles.length) % all.length;     // step so tiles stay different
+          apply(layers[1 - cur], encodeURI(all[idx]), false);
+        }
+        setTimeout(() => setInterval(next, 3500), t * 400);   // stagger each tile
+      });
+    })();
+  </script>
+</body>
+</html>
