@@ -218,7 +218,18 @@
     }
     .avatar.is-near   .face-near { opacity: 1; }   /* cursor nearby → tongue-out */
     .avatar.is-pressed .face-wink { opacity: 1; }  /* mouse held → wink (sits on top) */
-    @media (max-width: 1050px) { .avatar { display: none; } }
+    /* below 1050px the absolute, bleeding avatar has no room, so drop it into
+       normal flow: a centered hero illustration right under the headline */
+    @media (max-width: 1050px) {
+      .hero { min-height: auto; }
+      .avatar {
+        position: static;
+        transform: none;
+        top: auto; right: auto;
+        width: min(260px, 60%);
+        margin: 2rem auto 0;
+      }
+    }
 
     /* ---------- hero wrapper (reserves the first screen) ---------- */
     .hero {
