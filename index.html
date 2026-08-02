@@ -121,7 +121,7 @@
       font-size: 0.95rem;
       line-height: 1.65;
       max-width: 240px;
-      animation: fadeUp 0.9s ease 0.2s both;   /* gentle rise-in on load */
+      animation: fadeUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both;   /* gentle rise-in on load */
     }
     .bio strong { font-weight: 600; color: var(--blue); }
     .bio em {
@@ -513,7 +513,7 @@
       cursor: pointer;                 /* click the photo = next */
     }
     @keyframes lbIn { from { opacity: 0; transform: scale(0.985); } to { opacity: 1; transform: scale(1); } }
-    .lb-img.lb-anim { animation: lbIn 0.35s ease; }
+    .lb-img.lb-anim { animation: lbIn 0.35s cubic-bezier(0.22, 1, 0.36, 1); }
     @keyframes lbFade { from { opacity: 0; } to { opacity: 1; } }
     .lightbox:not([hidden]) { animation: lbFade 0.25s ease; }
     .lb-close, .lb-prev, .lb-next {
@@ -542,7 +542,7 @@
       position: fixed; inset: 0; z-index: 90;
       background: var(--bg);
       overflow-y: auto;
-      animation: gmIn 0.3s ease;
+      animation: gmIn 0.3s cubic-bezier(0.22, 1, 0.36, 1);
     }
     .gallery-modal[hidden] { display: none; }
     @keyframes gmIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
@@ -762,9 +762,8 @@
     .reveal {
       opacity: 0;
       transform: translateY(30px);
-      transition: opacity 1s cubic-bezier(0.22, 1, 0.36, 1),
-                  transform 1s cubic-bezier(0.22, 1, 0.36, 1);
-      will-change: opacity, transform;
+      transition: opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+                  transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
     }
     .reveal.in { opacity: 1; transform: none; }
     @media (prefers-reduced-motion: reduce) {
@@ -774,6 +773,21 @@
       .cam-wrap img { animation: none; }         /* cameras stop bobbing */
       .cg-img,
       .cg-img.show { transform: none !important; transition: opacity 0.4s ease !important; }  /* no ken-burns zoom */
+      /* drop hover movement too — keep the shadow/color feedback, lose the lift & zoom */
+      .nav a:hover,
+      .project:hover .thumb, .gallery img:hover, .gm-grid img:hover,
+      .set-card:hover .set-cover, .do-card:hover { transform: none; }
+    }
+
+    /* touch devices have no hover — don't leave a lift/scale state stuck after a tap */
+    @media (hover: none) {
+      .nav a:hover,
+      .project:hover .thumb, .gallery img:hover, .gm-grid img:hover,
+      .do-card:hover { transform: none; box-shadow: none; }
+      .set-card:hover .set-cover, .mosaic .tile:hover img { transform: none; }
+      .nav a:hover .label::after,
+      .project:hover .p-label::after,
+      .contact-links a:hover::after { transform: scaleX(0); }
     }
 
     /* ===== Contact / footer ===== */
@@ -803,6 +817,7 @@
       overflow: hidden;
       box-shadow: 0 8px 20px rgba(0,0,0,0.08);
       background: #eceae4;
+      contain: layout paint;            /* isolate the shape morph — it can't relayout anything outside the tile */
       transition: padding-bottom 0.9s cubic-bezier(0.22, 1, 0.36, 1);
     }
     .cg-frame.landscape { padding-bottom: 75%; }   /* landscape 4:3 */
@@ -1212,22 +1227,26 @@
       mouseY = e.clientY;
       if (reduceMotion) return;        // no cursor glow when motion is reduced
       glow.style.opacity = 1;          // reveal on movement
+      startGlow();                     // resume easing toward the cursor
 
       // hide the glow after 2 seconds of no movement (AFK)
       clearTimeout(idleTimer);
-      idleTimer = setTimeout(() => { glow.style.opacity = 0; }, 2000);
+      idleTimer = setTimeout(() => { glow.style.opacity = 0; stopGlow(); }, 2000);
     });
     // fade out when the mouse leaves the window
-    document.addEventListener("mouseleave", () => { glow.style.opacity = 0; });
+    document.addEventListener("mouseleave", () => { glow.style.opacity = 0; stopGlow(); });
 
+    // move via transform (GPU) — never left/top, which relayout the whole page each frame
+    let glowRAF = null;
     function moveGlow() {
       glowX += (mouseX - glowX) * 0.12;   // 0.12 = how quickly it catches up
       glowY += (mouseY - glowY) * 0.12;
-      glow.style.left = glowX + "px";
-      glow.style.top  = glowY + "px";
-      requestAnimationFrame(moveGlow);
+      glow.style.transform =
+        "translate3d(" + glowX + "px," + glowY + "px,0) translate(-50%,-50%)";
+      glowRAF = requestAnimationFrame(moveGlow);
     }
-    if (!reduceMotion) moveGlow();
+    function startGlow() { if (glowRAF === null) moveGlow(); }              // resume loop
+    function stopGlow()  { if (glowRAF !== null) { cancelAnimationFrame(glowRAF); glowRAF = null; } }  // idle = no work
 
     /* ===== WINK WHILE THE MOUSE IS HELD DOWN ===== */
     const avatar = document.getElementById("avatar");
@@ -1449,18 +1468,20 @@
     document.getElementById("gmClose").addEventListener("click", closeGallery);
 
     /* -- single-photo viewer (optional zoom from the grid) -- */
-    function showLb() {
+    function showLb(firstOpen) {
       lbImg.classList.remove("lb-anim");
-      void lbImg.offsetWidth;                 // restart the entrance animation
       lbImg.src = encodeURI(lbList[lbIndex]);
-      lbImg.classList.add("lb-anim");
+      if (firstOpen) {                        // scale-in only on open — prev/next swap instantly (interruptible)
+        void lbImg.offsetWidth;               // restart the entrance animation
+        lbImg.classList.add("lb-anim");
+      }
       lbCounter.textContent = (lbIndex + 1) + " / " + lbList.length;
     }
     function openLightbox(images, i) {
       lbList = images; lbIndex = i;
       lb.hidden = false;
       updateScrollLock();
-      showLb();
+      showLb(true);
     }
     function closeLightbox() { lb.hidden = true; updateScrollLock(); }
     function lbStep(d) {
@@ -1560,9 +1581,9 @@
       if (!("IntersectionObserver" in window)) { els.forEach((el) => el.classList.add("in")); return; }
       const io = new IntersectionObserver((entries) => {
         entries.forEach((e) => {
-          e.target.classList.toggle("in", e.isIntersecting);   // fade in AND out
+          if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }  // reveal once, then stop
         });
-      }, { threshold: 0.1, rootMargin: "-10% 0px -10% 0px" });
+      }, { threshold: 0.1, rootMargin: "0px 0px -10% 0px" });
       els.forEach((el) => io.observe(el));
     })();
 
