@@ -1168,6 +1168,7 @@
 
     const typedEl   = document.getElementById("typed");
     const articleEl = document.getElementById("article");
+    const commaEl   = document.querySelector(".comma");
     const root      = document.documentElement;
     const article   = (w) => (/^[aeiou]/i.test(w) ? "an" : "a");   // "a" / "an" agrees with the word
 
@@ -1187,6 +1188,8 @@
 
       // show more (or fewer) letters
       typedEl.textContent = role.text.slice(0, charIndex);
+      // the trailing comma belongs to the finished word only — hide it mid-type so it never reads as "vis,"
+      if (commaEl) commaEl.style.visibility = charIndex >= role.text.length ? "visible" : "hidden";
 
       if (!deleting) {
         charIndex++;
