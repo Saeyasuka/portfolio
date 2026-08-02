@@ -14,6 +14,10 @@
     /* ---------- basic reset ---------- */
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
+    /* smooth in-page jumps (nav links) — off when the OS asks for reduced motion */
+    html { scroll-behavior: smooth; }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
     :root {
       --bg: #f6f6f4;          /* page background */
       --blue: #2f4fb5;        /* main navy-blue text */
@@ -496,8 +500,19 @@
       .mosaic .tile:hover img { transform: none; }
     }
     @media (max-width: 800px) {
-      .mosaic { grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(2, 1fr); aspect-ratio: 1 / 1; }
-      .mosaic .tile:first-child { grid-column: span 2; grid-row: span 1; }
+      /* 5 tiles don't fit a fixed 2x2 — let rows grow and size every tile evenly:
+         a full-width hero on top, then a tidy 2x2 grid of squares below */
+      .mosaic {
+        grid-template-columns: repeat(2, 1fr);
+        grid-template-rows: none;      /* rows size to their content, no overflow into mismatched tracks */
+        aspect-ratio: auto;            /* drop the fixed 2/1 ratio that squashed the tiles */
+      }
+      .mosaic .tile { aspect-ratio: 1 / 1; }          /* uniform squares */
+      .mosaic .tile:first-child {
+        grid-column: 1 / -1;           /* full-width hero image */
+        grid-row: auto;
+        aspect-ratio: 16 / 10;
+      }
     }
 
     /* full-screen lightbox */
@@ -693,6 +708,16 @@
         flex: 0 0 auto; width: min(340px, 88%);
         margin: 0;
       }
+      /* staggered entrance as the cards scroll into view (desktop keeps the scroll-scrub) */
+      .do-card {
+        opacity: 0;
+        transform: translateY(34px) scale(0.96);
+        transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+                    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      .do-slot.in .do-card { opacity: 1; transform: none; }
+      .do-slot--2.in .do-card { transition-delay: 0.13s; }   /* each note lands a beat after the last */
+      .do-slot--3.in .do-card { transition-delay: 0.26s; }
     }
 
     /* ===== About Me ===== */
@@ -769,6 +794,7 @@
     .reveal.in { opacity: 1; transform: none; }
     @media (prefers-reduced-motion: reduce) {
       .reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+      .do-card { opacity: 1 !important; transform: none !important; transition: none !important; }  /* show cards, skip the entrance */
       .bio { animation: none; }
       .cursor { animation: none; }               /* stop the blink */
       .cam-wrap img { animation: none; }         /* cameras stop bobbing */
@@ -875,28 +901,41 @@
     /* ---------- make it work on phones ---------- */
     @media (max-width: 800px) {
       .layout { grid-template-columns: 1fr; }
-      /* compact top bar instead of a tall stacked sidebar */
+      /* slim STICKY top bar — brand + nav ride along, always reachable */
       .sidebar {
-        position: static; height: auto;
+        position: sticky; top: 0; z-index: 50;
+        height: auto; align-self: start;
+        flex-direction: row; align-items: center; justify-content: space-between;
+        gap: 1rem;
         border-right: none; border-bottom: 1px solid var(--line);
-        padding: 1.5rem 1.5rem 1.7rem;
+        padding: 0.7rem 1.2rem;
+        background: rgba(246, 246, 244, 0.82);         /* --bg, translucent */
+        -webkit-backdrop-filter: saturate(1.4) blur(12px);
+        backdrop-filter: saturate(1.4) blur(12px);
       }
-      .nav {                        /* links flow in a row, not a tall column */
-        flex-direction: row; flex-wrap: wrap;
-        gap: 0.9rem 1.5rem; margin-top: 1.5rem;
+      /* show just the avatar on the bar — the full name lives in the hero + footer */
+      .brand { font-size: 0; gap: 0; flex-shrink: 0; }
+      .brand img { width: 32px; height: 32px; }
+      .nav {                        /* one tidy row, right-aligned (wraps only if it must) */
+        flex-direction: row; flex-wrap: wrap; justify-content: flex-end;
+        gap: 0.2rem 1.15rem; margin-top: 0;
       }
+      .nav a { font-size: 0.98rem; }
       .nav a:hover { transform: none; }   /* no sideways nudge in a horizontal row */
-      .bio { margin-top: 1.4rem; max-width: 46ch; }
+      .bio, .socials { display: none; }   /* declutter the bar; socials live in the footer */
+      /* let the long typed role wrap instead of overflowing on any phone/tablet */
+      .headline { overflow-wrap: anywhere; }
+      .typed-live { white-space: normal; }
       .main { padding: 2rem 1.5rem; }
-      .headline { margin-top: 2rem; }
-      .hero { min-height: auto; padding: 2.5rem 0 3rem; }
+      .headline { margin-top: 1rem; }
+      .hero { min-height: auto; padding: 1.5rem 0 3rem; }
       .project { grid-template-columns: 1fr; gap: 1.2rem; }
+      /* keep anchored section tops clear of the sticky bar */
+      #works, #services, #about, #contact { scroll-margin-top: 76px; }
     }
 
     /* roomier touch targets on phones (no cursor = tapping) */
     @media (max-width: 800px) {
-      .socials { gap: 14px; }
-      .socials a { width: 44px; height: 44px; }   /* was 38px — below the 44px tap minimum */
       .nav a { padding: 8px 0; }                  /* grows the tap height beyond the 20px text line */
       .contact-links a { padding: 6px 0; }
     }
@@ -904,7 +943,9 @@
     /* ---------- small phones: tighten type + spacing ---------- */
     @media (max-width: 430px) {
       .main { padding: 1.6rem 1.15rem; }
-      .sidebar { padding: 1.25rem 1.15rem 1.4rem; }
+      .sidebar { padding: 0.6rem 1.1rem; }        /* keep the sticky bar slim on small phones */
+      .nav { gap: 0.2rem 0.9rem; }
+      .nav a { font-size: 0.92rem; }
       /* the long typed role word (e.g. visual_storyteller,) can't force overflow */
       .headline { font-size: 1.55rem; overflow-wrap: anywhere; }
       .typed-live { white-space: normal; }
@@ -913,7 +954,13 @@
       .collection { margin-top: 2.4rem; }
       .contact-gallery { gap: 0.7rem; margin-bottom: 2.4rem; }
     }
-  </style>
+
+    /* very small phones (≤360px): keep the sticky nav on one slim row */
+    @media (max-width: 360px) {
+      .nav { gap: 0.15rem 0.7rem; }
+      .nav a { font-size: 0.85rem; }
+    }
+</style>
 </head>
 
 <body>
@@ -1496,8 +1543,26 @@
     document.querySelector(".lb-close").addEventListener("click", closeLightbox);
     document.querySelector(".lb-prev").addEventListener("click", () => lbStep(-1));
     document.querySelector(".lb-next").addEventListener("click", () => lbStep(1));
-    lbImg.addEventListener("click", () => lbStep(1));     // click photo = next
+    let lbSwiped = false;                                  // a swipe shouldn't also fire the tap-next
+    lbImg.addEventListener("click", () => { if (!lbSwiped) lbStep(1); });   // tap photo = next
     lb.addEventListener("click", (e) => { if (e.target === lb) closeLightbox(); });
+
+    /* swipe left/right to flip through photos on touch */
+    let lbTouchX = null, lbTouchY = null;
+    lb.addEventListener("touchstart", (e) => {
+      const t = e.changedTouches[0];
+      lbTouchX = t.clientX; lbTouchY = t.clientY; lbSwiped = false;
+    }, { passive: true });
+    lb.addEventListener("touchend", (e) => {
+      if (lbTouchX === null) return;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - lbTouchX, dy = t.clientY - lbTouchY;
+      if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) {   // clear horizontal flick
+        lbSwiped = true;                                        // suppress the click-next that follows
+        lbStep(dx < 0 ? 1 : -1);                                // left = next, right = prev
+      }
+      lbTouchX = lbTouchY = null;
+    }, { passive: true });
 
     document.addEventListener("keydown", (e) => {
       if (!lb.hidden) {                       // single viewer takes priority
@@ -1577,7 +1642,7 @@
 
     /* ===== soft blend-in for About + Featured Work ===== */
     (function () {
-      const sels = [".about-card", ".featured", ".category", ".collection", ".work .project"];
+      const sels = [".about-card", ".featured", ".category", ".collection", ".work .project", ".services-title"];
       const els = [];
       sels.forEach((s) => document.querySelectorAll(s).forEach((el) => els.push(el)));
       if (!els.length) return;
@@ -1589,6 +1654,21 @@
         });
       }, { threshold: 0.1, rootMargin: "0px 0px -10% 0px" });
       els.forEach((el) => io.observe(el));
+    })();
+
+    /* ===== WHAT I DO: staggered card entrance on mobile/tablet =====
+       (desktop >1200px keeps its scroll-scrubbed fan-out; the mobile CSS
+       hides the cards until each .do-slot gets the .in class below) */
+    (function () {
+      const slots = Array.from(document.querySelectorAll(".do-slot"));
+      if (!slots.length) return;
+      if (!("IntersectionObserver" in window)) { slots.forEach((s) => s.classList.add("in")); return; }
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+        });
+      }, { threshold: 0.25, rootMargin: "0px 0px -8% 0px" });
+      slots.forEach((s) => io.observe(s));
     })();
 
     /* ===== CONTACT: photo collage that cycles every 3.5s (crossfade + ken burns) ===== */
