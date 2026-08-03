@@ -152,6 +152,68 @@
     }
     .socials a:hover { background: #eef0f7; }
 
+    /* ---------- scroll-collapse nav (desktop) ----------
+       At the top the full sidebar shows. Once you scroll, it tucks off-canvas,
+       the content reclaims the full width, and a mascot logo pins to the top-left.
+       Click the logo to slide the sidebar back in as a drawer (no scroll jump). */
+    .sidebar {
+      transition: opacity 0.3s ease, transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .mini-logo {
+      display: block;           /* shown (faded) once the nav collapses, all sizes */
+      position: fixed;
+      top: 26px; left: 28px;
+      width: 56px; height: 56px;
+      border-radius: 15px;
+      overflow: hidden;
+      z-index: 60;              /* above the glow (40), below the modals (90/100) */
+      background: var(--bg);
+      box-shadow: 0 6px 22px rgba(0, 0, 0, 0.15);
+      opacity: 0;
+      transform: translateY(-8px) scale(0.85);
+      pointer-events: none;
+      transition: opacity 0.3s ease, transform 0.3s ease, box-shadow 0.2s ease;
+      cursor: pointer;
+    }
+    .mini-logo img {
+      width: 100%; height: 100%;
+      object-fit: cover; object-position: center 36%;   /* frame the face */
+      display: block;
+    }
+
+    @media (min-width: 801px) {
+      .sidebar { grid-column: 1; }
+      .main { grid-column: 2; }                                  /* pin main to col 2 so it stays put when the sidebar leaves flow */
+      .layout { transition: grid-template-columns 0.45s cubic-bezier(0.22, 1, 0.36, 1); }
+
+      /* collapsed: content reclaims the full width, sidebar off-canvas, logo shown */
+      body.nav-min .layout { grid-template-columns: 0 1fr; }
+      body.nav-min .sidebar {
+        position: fixed; top: 0; left: 0;
+        width: 340px; height: 100vh;
+        background: var(--bg);
+        border-right: 1px solid var(--line);
+        box-shadow: 0 0 44px rgba(0, 0, 0, 0.16);
+        transform: translateX(-100%);        /* tucked away to the left */
+        opacity: 1; pointer-events: none;
+        z-index: 70;
+      }
+      body.nav-min .mini-logo { opacity: 1; transform: none; pointer-events: auto; }
+      body.nav-min .mini-logo:hover { transform: scale(1.06); box-shadow: 0 8px 26px rgba(0, 0, 0, 0.22); }
+
+      /* click the logo → slide the sidebar drawer in (stays at the same scroll spot) */
+      body.nav-open .sidebar { transform: translateX(0); pointer-events: auto; }
+      body.nav-open .mini-logo { opacity: 0; pointer-events: none; }
+      body.nav-open::before {                 /* soft scrim behind the drawer */
+        content: ""; position: fixed; inset: 0; z-index: 65;
+        background: rgba(15, 15, 18, 0.16);
+        pointer-events: none;
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .sidebar, .mini-logo, .layout { transition: none; }
+    }
+
     /* ---------- MAIN AREA ---------- */
     .main {
       padding: 2.5rem 4rem;
@@ -951,6 +1013,16 @@
       #works, #services, #about, #contact { scroll-margin-top: 76px; }
     }
 
+    /* scroll-collapse on phones/tablets too: the bar slides up to a mascot logo,
+       tap the logo to slide the nav bar back down */
+    @media (max-width: 800px) {
+      .mini-logo { top: 12px; left: 14px; width: 46px; height: 46px; border-radius: 12px; }
+      body.nav-min .sidebar { transform: translateY(-100%); opacity: 0; pointer-events: none; }
+      body.nav-min .mini-logo { opacity: 1; transform: none; pointer-events: auto; }
+      body.nav-open .sidebar { transform: none; opacity: 1; pointer-events: auto; }   /* tap logo → bar drops back in */
+      body.nav-open .mini-logo { opacity: 0; pointer-events: none; }
+    }
+
     /* roomier touch targets on phones (no cursor = tapping) */
     @media (max-width: 800px) {
       .nav a { padding: 8px 0; }                  /* grows the tap height beyond the 20px text line */
@@ -983,6 +1055,11 @@
 <body>
   <!-- soft glow that follows the cursor -->
   <div class="glow" id="glow"></div>
+
+  <!-- collapsed-nav mascot logo (desktop): appears once you scroll, click to go up -->
+  <a class="mini-logo" id="miniLogo" href="#" aria-label="Back to top">
+    <img src="avatar.png" alt="Naffi" />
+  </a>
 
   <div class="layout">
 
@@ -1282,6 +1359,35 @@
     } else {
       tick();
     }
+
+    /* ===== SCROLL-COLLAPSE NAV (desktop) =====
+       Once you scroll past the hero, collapse the sidebar to a mascot logo
+       (top-left). Hysteresis keeps it from flickering right at the threshold. */
+    const miniLogo = document.getElementById("miniLogo");
+    const body = document.body;
+    let navMin = false;
+    function onNavScroll() {
+      const y = window.scrollY;
+      if (!navMin && y > 90)      { navMin = true;  body.classList.add("nav-min"); }
+      else if (navMin && y < 30)  { navMin = false; body.classList.remove("nav-min", "nav-open"); }
+    }
+    window.addEventListener("scroll", onNavScroll, { passive: true });
+    onNavScroll();
+    if (miniLogo) {
+      miniLogo.addEventListener("click", (e) => {
+        e.preventDefault();
+        body.classList.add("nav-open");            // slide the sidebar drawer in (no scrolling)
+      });
+    }
+    // picking a nav link closes the drawer and lets the link jump to its section
+    document.querySelectorAll(".nav a").forEach((a) =>
+      a.addEventListener("click", () => body.classList.remove("nav-open")));
+    // clicking anywhere outside the open drawer closes it
+    document.addEventListener("click", (e) => {
+      if (!body.classList.contains("nav-open")) return;
+      const sb = document.querySelector(".sidebar");
+      if (!sb.contains(e.target) && !e.target.closest("#miniLogo")) body.classList.remove("nav-open");
+    });
 
     /* ===== CURSOR-FOLLOWING GLOW =====
        The glow eases toward the mouse (a little lag = smooth, premium feel). */
