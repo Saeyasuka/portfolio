@@ -923,12 +923,28 @@
       .nav a { font-size: 0.98rem; }
       .nav a:hover { transform: none; }   /* no sideways nudge in a horizontal row */
       .bio, .socials { display: none; }   /* declutter the bar; socials live in the footer */
-      /* let the long typed role wrap instead of overflowing on any phone/tablet */
+      /* let the typed role flow INLINE with the sentence — no fixed overlay slot,
+         so the gold comma always hugs the word and never drops to its own line */
       .headline { overflow-wrap: anywhere; }
-      .typed-live { white-space: normal; }
+      .typed-wrap { display: inline; }
+      .typed-sizer { display: none; }
+      .typed-live { position: static; display: inline; white-space: normal; }
       .main { padding: 2rem 1.5rem; }
-      .headline { margin-top: 1rem; }
-      .hero { min-height: auto; padding: 1.5rem 0 3rem; }
+      /* mascot bleeds in from the right (like desktop), not a centered block */
+      .hero {
+        position: relative;
+        min-height: auto;
+        padding: 1.5rem 0 2.5rem;
+      }
+      .headline { margin-top: 1rem; max-width: 64%; position: relative; z-index: 1; }
+      .avatar {
+        position: absolute;
+        top: 50%; left: auto; right: -40px;
+        transform: translateY(-50%);
+        width: min(208px, 46%);
+        margin: 0;
+        z-index: 0;
+      }
       .project { grid-template-columns: 1fr; gap: 1.2rem; }
       /* keep anchored section tops clear of the sticky bar */
       #works, #services, #about, #contact { scroll-margin-top: 76px; }
@@ -1009,14 +1025,14 @@
           Hi, I'm Naffi, <span id="article">a</span> <span class="typed-wrap"><span class="typed-sizer">visual_storyteller,</span><span class="typed-live"><span class="typed" id="typed"></span><span class="comma">,</span><span class="cursor" id="cursor">&nbsp;</span></span></span>
           who finds the story hiding behind every pose
         </h1>
-      </section>
 
-      <!-- ===== AVATAR ILLUSTRATION (reacts to the cursor) ===== -->
-      <div class="avatar" id="avatar">
-        <img class="face face-normal" src="avatar.png" alt="Illustration of Naffi" />
-        <img class="face face-near" src="avatar-near.png" alt="" />
-        <img class="face face-wink" src="avatar-wink.png" alt="" />
-      </div>
+        <!-- ===== AVATAR ILLUSTRATION (reacts to the cursor) ===== -->
+        <div class="avatar" id="avatar">
+          <img class="face face-normal" src="avatar.png" alt="Illustration of Naffi" />
+          <img class="face face-near" src="avatar-near.png" alt="" />
+          <img class="face face-wink" src="avatar-wink.png" alt="" />
+        </div>
+      </section>
 
       <!-- ===== FEATURED WORK ===== -->
       <section class="work" id="works">
