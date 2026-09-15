@@ -1076,16 +1076,17 @@
       /* mascot bleeds in from the right (like desktop), not a centered block */
       .hero {
         position: relative;
-        min-height: calc(100svh - 54px);   /* fill the phone screen (minus the 54px sticky nav) — page 1 reads as a full landing */
+        min-height: calc(100svh - 160px);  /* big landing (most of the screen) but sized so the headline + mascot actually fill it — no empty middle band */
         padding: 1.5rem 0 2.5rem;
         align-items: flex-start;   /* keep the headline near the top, not floated to center */
       }
-      .headline { margin-top: 1rem; max-width: 60%; position: relative; z-index: 1; }
+      .headline { margin-top: 1.2rem; max-width: 66%; position: relative; z-index: 1; }
       .avatar {
         position: absolute;
-        top: 50%; left: auto; right: -14vw;    /* proportional bleed off the right */
-        transform: translateY(-50%);
-        width: min(250px, 60vw);               /* cropped face, no longer dominating the hero */
+        top: auto; left: auto;
+        bottom: 0; right: -10vw;               /* anchor bottom-right, bleed off the right */
+        transform: none;
+        width: min(400px, 92vw);               /* big — fills the lower half of the screen */
         margin: 0;
         z-index: 0;
       }
@@ -1117,7 +1118,7 @@
       .nav { gap: 0.2rem 0.9rem; }
       .nav a { font-size: 0.92rem; }
       /* the long typed role word (e.g. visual_storyteller,) can't force overflow */
-      .headline { font-size: 1.55rem; overflow-wrap: anywhere; }
+      .headline { font-size: 2rem; overflow-wrap: anywhere; }
       .typed-live { white-space: normal; }
       .work { padding-top: 4.5rem; padding-bottom: 4rem; }
       .featured { margin-bottom: 2.4rem; }
