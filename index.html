@@ -1089,9 +1089,9 @@
       .avatar {
         position: absolute;
         top: auto; left: auto;
-        bottom: 0; right: -4vw;                /* anchor bottom-right, slight bleed */
+        bottom: 0; right: -20vw;               /* push it off the right so the face is CROPPED by the screen edge, like desktop */
         transform: none;
-        width: min(360px, 86vw);               /* this is ~the visible face now */
+        width: min(460px, 112vw);              /* big; the right ear/hair bleeds off, headline sits over the upper-left */
         aspect-ratio: 1.125;                   /* face is 63:56 (w:h) */
         overflow: hidden;
         margin: 0;
