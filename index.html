@@ -1513,7 +1513,15 @@
       else if (navMin && y < 30)  { navMin = false; flipMainReclaim(() => body.classList.remove("nav-min", "nav-open")); }
     }
     window.addEventListener("scroll", onNavScroll, { passive: true });
-    window.addEventListener("resize", onNavScroll);   // un-collapse if the window grows to desktop
+    // ONLY react to the window actually growing to desktop width — never run the
+    // collapse logic on a resize, because mobile browsers fire resize constantly
+    // while scrolling (address bar show/hide), which would flicker the sidebar.
+    window.addEventListener("resize", () => {
+      if (window.innerWidth > 800 && navMin) {
+        navMin = false;
+        body.classList.remove("nav-min", "nav-open");
+      }
+    });
     // initial state on load: set it directly, with no slide animation
     if (window.innerWidth <= 800 && window.scrollY > 90) { navMin = true; body.classList.add("nav-min"); }
     if (miniLogo) {
