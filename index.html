@@ -885,7 +885,8 @@
     }
     .about-title {
       font-family: "Newsreader", Georgia, serif;
-      font-size: 2.2rem; color: var(--blue);
+      font-size: clamp(1.8rem, 3.2vw, 2.6rem);   /* same scale as "What I Do" / "Tools I Use" so titles match across viewports */
+      color: var(--blue);
     }
     .about-sub { color: var(--blue-soft); margin: 0.5rem 0 1.8rem; font-size: 1.02rem; }
     .about-photo { border-radius: 14px; overflow: hidden; }
@@ -1075,7 +1076,7 @@
       /* mascot bleeds in from the right (like desktop), not a centered block */
       .hero {
         position: relative;
-        min-height: 240px;         /* smaller mascot needs less clearance above About */
+        min-height: calc(100svh - 54px);   /* fill the phone screen (minus the 54px sticky nav) — page 1 reads as a full landing */
         padding: 1.5rem 0 2.5rem;
         align-items: flex-start;   /* keep the headline near the top, not floated to center */
       }
