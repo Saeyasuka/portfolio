@@ -62,6 +62,10 @@
     }
     /* let the glow show through the layout's empty areas */
     .sidebar, .main { background: transparent; }
+    /* let the 1fr column shrink to the viewport instead of growing to fit wide
+       children (e.g. the Tools marquee track) — without this a max-content child
+       blows the whole page wider than the screen and pushes the mascot off-screen */
+    .main { min-width: 0; }
 
     /* ---------- LEFT SIDEBAR ---------- */
     .sidebar {
@@ -184,7 +188,7 @@
     @media (min-width: 801px) {
       .sidebar { grid-column: 1; }
       .main { grid-column: 2; }                                  /* pin main to col 2 so it stays put when the sidebar leaves flow */
-      .layout { transition: grid-template-columns 0.45s cubic-bezier(0.22, 1, 0.36, 1); }
+      /* no transition on .layout — the grid reclaim is one instant reflow; the sidebar slide + logo fade carry the motion */
 
       /* collapsed: content reclaims the full width, sidebar off-canvas, logo shown */
       body.nav-min .layout { grid-template-columns: 0 1fr; }
@@ -211,7 +215,7 @@
       }
     }
     @media (prefers-reduced-motion: reduce) {
-      .sidebar, .mini-logo, .layout { transition: none; }
+      .sidebar, .mini-logo { transition: none; }
     }
 
     /* ---------- MAIN AREA ---------- */
@@ -782,6 +786,81 @@
       .do-slot--3.in .do-card { transition-delay: 0.26s; }
     }
 
+    /* ===== Tools I Use ===== */
+    .tools {
+      position: relative;
+      z-index: 2;
+      padding: 5.5rem 1.5rem 5rem;
+      text-align: center;
+      background: var(--bg);
+    }
+    .tools-title {
+      font-family: "Newsreader", Georgia, serif;
+      font-size: clamp(1.8rem, 3.2vw, 2.6rem);
+      color: var(--blue);
+      margin-bottom: 0.5rem;
+    }
+    .tools {
+      padding-left: 0;
+      padding-right: 0;
+    }
+    .tools-sub {
+      color: var(--blue-soft);
+      font-size: 1.02rem;
+      margin-bottom: 3rem;
+    }
+    /* ---- scrolling logo marquee (right → left, slow, seamless loop) ---- */
+    .marquee {
+      overflow: hidden;
+      width: 100%;
+      /* fade the strip in/out at both edges */
+      -webkit-mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
+              mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
+    }
+    .marquee-track {
+      display: flex;
+      align-items: center;
+      width: max-content;
+      gap: 4.5rem;
+      padding: 0.5rem 2.25rem;               /* half a gap of lead-in so the loop seam is invisible */
+      animation: tools-marquee 42s linear infinite;
+      will-change: transform;
+    }
+    .marquee:hover .marquee-track { animation-play-state: paused; }   /* pause on hover */
+    /* the track holds TWO identical sets; sliding by half its width loops seamlessly */
+    @keyframes tools-marquee {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+    .tool-logo {
+      flex: 0 0 auto;
+      width: 58px;
+      height: 58px;                 /* identical square box → every logo shares one footprint */
+      object-fit: contain;          /* scales to fit, keeps aspect, never distorts */
+      object-position: center;
+      display: block;
+    }
+    /* text stand-in shown until a real logo file exists in images/Tools/ */
+    .tool-logo--text {
+      font-weight: 600;
+      font-size: 1.15rem;
+      color: var(--blue-soft);
+      white-space: nowrap;
+      letter-spacing: 0.01em;
+      opacity: 0.85;
+    }
+    @media (max-width: 640px) {
+      .tools { padding-top: 4.5rem; padding-bottom: 4rem; }
+      .tools-sub { margin-bottom: 2.2rem; }
+      .marquee-track { gap: 3rem; }
+      .tool-logo { width: 44px; height: 44px; }
+      .tool-logo--text { font-size: 1rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .marquee-track { animation: none; }
+      .marquee { overflow-x: auto; }        /* let users scroll it by hand instead */
+    }
+
     /* ===== About Me ===== */
     .about {
       position: relative;
@@ -1073,6 +1152,7 @@
       <nav class="nav">
         <a href="#about"><span class="label">About</span></a>
         <a href="#services"><span class="label">Services</span></a>
+        <a href="#tools"><span class="label">Tools</span></a>
         <a href="#works"><span class="label">Works</span></a>
         <a href="#contact"><span class="label">Contact</span></a>
       </nav>
@@ -1235,6 +1315,17 @@
         </div>
       </section>
 
+      <!-- ===== TOOLS I USE ===== -->
+      <!-- Marquee logos are built by JS from the TOOLS list; drop logo files in
+           images/Tools/ (png · jpg · svg · webp) named to match, e.g. photoshop.png -->
+      <section class="tools" id="tools">
+        <h2 class="tools-title">Tools I Use</h2>
+        <p class="tools-sub">The kit behind the work.</p>
+        <div class="marquee" id="toolsMarquee">
+          <div class="marquee-track" id="toolsTrack"></div>
+        </div>
+      </section>
+
       <!-- ===== ABOUT ME ===== -->
       <section class="about" id="about">
         <div class="about-card">
@@ -1365,14 +1456,39 @@
        (top-left). Hysteresis keeps it from flickering right at the threshold. */
     const miniLogo = document.getElementById("miniLogo");
     const body = document.body;
+    const mainEl = document.querySelector(".main");
     let navMin = false;
+
+    /* FLIP the width reclaim: the grid switches in ONE reflow (no per-frame
+       layout, no text re-wrapping mid-motion), then .main slides into its new
+       position with a GPU transform — synced to the sidebar's 0.4s slide so the
+       content and sidebar move together instead of the content snapping. */
+    function flipMainReclaim(mutate) {
+      if (reduceMotion || window.innerWidth < 801) { mutate(); return; }
+      const first = mainEl.getBoundingClientRect().left;
+      mutate();                                   // grid collapses/expands instantly
+      const last = mainEl.getBoundingClientRect().left;
+      const dx = first - last;                    // how far it jumped
+      if (!dx) return;
+      mainEl.style.transition = "none";
+      mainEl.style.transform = "translateX(" + dx + "px)";   // pin it back where it was
+      requestAnimationFrame(() => {
+        mainEl.style.transition = "transform 0.4s cubic-bezier(0.22, 1, 0.36, 1)";
+        mainEl.style.transform = "translateX(0)";            // ...then glide into place
+      });
+    }
+    mainEl.addEventListener("transitionend", (e) => {
+      if (e.propertyName === "transform") { mainEl.style.transition = ""; mainEl.style.transform = ""; }
+    });
+
     function onNavScroll() {
       const y = window.scrollY;
-      if (!navMin && y > 90)      { navMin = true;  body.classList.add("nav-min"); }
-      else if (navMin && y < 30)  { navMin = false; body.classList.remove("nav-min", "nav-open"); }
+      if (!navMin && y > 90)      { navMin = true;  flipMainReclaim(() => body.classList.add("nav-min")); }
+      else if (navMin && y < 30)  { navMin = false; flipMainReclaim(() => body.classList.remove("nav-min", "nav-open")); }
     }
     window.addEventListener("scroll", onNavScroll, { passive: true });
-    onNavScroll();
+    // initial state on load: set it directly, with no slide animation
+    if (window.scrollY > 90) { navMin = true; body.classList.add("nav-min"); }
     if (miniLogo) {
       miniLogo.addEventListener("click", (e) => {
         e.preventDefault();
@@ -1765,7 +1881,7 @@
 
     /* ===== soft blend-in for About + Featured Work ===== */
     (function () {
-      const sels = [".about-card", ".featured", ".category", ".collection", ".work .project", ".services-title"];
+      const sels = [".about-card", ".featured", ".category", ".collection", ".work .project", ".services-title", ".tools-title", ".tools-sub"];
       const els = [];
       sels.forEach((s) => document.querySelectorAll(s).forEach((el) => els.push(el)));
       if (!els.length) return;
@@ -1777,6 +1893,56 @@
         });
       }, { threshold: 0.1, rootMargin: "0px 0px -10% 0px" });
       els.forEach((el) => io.observe(el));
+    })();
+
+    /* ===== TOOLS marquee: build a seamless right→left logo strip =====
+       Drop logo files in images/Tools/ named to match `file` below.
+       Any of these extensions work; a text stand-in shows until the file exists. */
+    (function () {
+      const track = document.getElementById("toolsTrack");
+      if (!track) return;
+
+      const TOOLS = [
+        { name: "Photoshop",        file: "photoshop" },
+        { name: "Illustrator",      file: "illustrator" },
+        { name: "After Effects",    file: "after-effects" },
+        { name: "Lightroom",        file: "lightroom" },
+        { name: "DaVinci Resolve",  file: "davinci-resolve" },
+        { name: "CapCut",           file: "capcut" },
+        { name: "FL Studio",        file: "fl-studio" },
+        { name: "Claude Code",      file: "claude-code" },
+        { name: "Higgsfield",       file: "higgsfield" },
+      ];
+      const EXTS = ["png", "webp", "jpg", "jpeg", "svg"];
+
+      function makeLogo(tool) {
+        const img = document.createElement("img");
+        img.className = "tool-logo";
+        img.alt = tool.name;
+        img.decoding = "async";
+        let i = 0;
+        img.src = "images/Tools/" + tool.file + "." + EXTS[i];
+        img.addEventListener("error", function onErr() {
+          i += 1;
+          if (i < EXTS.length) {                    // try the next extension
+            img.src = "images/Tools/" + tool.file + "." + EXTS[i];
+          } else {                                   // no file yet → text stand-in
+            img.removeEventListener("error", onErr);
+            const span = document.createElement("span");
+            span.className = "tool-logo tool-logo--text";
+            span.textContent = tool.name;
+            img.replaceWith(span);
+          }
+        });
+        return img;
+      }
+
+      // two identical sets back-to-back so the -50% loop is seamless
+      for (let pass = 0; pass < 2; pass++) {
+        const frag = document.createDocumentFragment();
+        TOOLS.forEach((t) => frag.appendChild(makeLogo(t)));
+        track.appendChild(frag);
+      }
     })();
 
     /* ===== WHAT I DO: staggered card entrance on mobile/tablet =====
