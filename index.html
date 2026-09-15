@@ -597,8 +597,12 @@
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
       cursor: pointer;                 /* click the photo = next */
     }
-    @keyframes lbIn { from { opacity: 0; transform: scale(0.985); } to { opacity: 1; transform: scale(1); } }
-    .lb-img.lb-anim { animation: lbIn 0.35s cubic-bezier(0.22, 1, 0.36, 1); }
+    /* open = camera "focus pull" (blurred + zoomed, then snaps sharp); swap = a quick refocus */
+    @keyframes lbFocus { 0% { opacity: 0; filter: blur(12px); transform: scale(1.06); } 55% { opacity: 1; filter: blur(0); } 100% { opacity: 1; filter: blur(0); transform: scale(1); } }
+    @keyframes lbAdvance { 0% { filter: blur(7px); opacity: 0.45; } 100% { filter: blur(0); opacity: 1; } }
+    .lb-img { position: relative; z-index: 2; }
+    .lb-img.lb-anim { animation: lbFocus 0.55s cubic-bezier(0.22, 1, 0.36, 1); }
+    .lb-img.lb-adv  { animation: lbAdvance 0.28s ease; }
     @keyframes lbFade { from { opacity: 0; } to { opacity: 1; } }
     .lightbox:not([hidden]) { animation: lbFade 0.25s ease; }
     .lb-close, .lb-prev, .lb-next {
@@ -613,10 +617,67 @@
     .lb-close { top: 22px; right: 24px; }
     .lb-prev { left: 24px; top: 50%; transform: translateY(-50%); }
     .lb-next { right: 24px; top: 50%; transform: translateY(-50%); }
-    .lb-counter {
-      position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
-      color: #fff; font-size: 0.85rem; letter-spacing: 0.05em;
-      background: rgba(255,255,255,0.12); padding: 6px 14px; border-radius: 999px;
+    /* ===== camera-viewfinder HUD ===== */
+    .lb-close, .lb-prev, .lb-next { z-index: 3; }
+    .lb-hud {
+      position: fixed; inset: 0; z-index: 1; pointer-events: none;
+      font-family: ui-monospace, "SFMono-Regular", Menlo, "Courier New", monospace;
+      color: #ece9e3;
+    }
+    /* lens vignette — deepens the dark edges you already have */
+    .lb-vignette { position: absolute; inset: 0; background: radial-gradient(130% 108% at 50% 50%, transparent 40%, rgba(0,0,0,0.62) 100%); }
+    /* framing corner brackets */
+    .lb-corner { position: absolute; width: 26px; height: 26px; border: 2px solid rgba(236,233,227,0.6); }
+    .lb-c-tl { top: 18px; left: 18px;  border-right: none; border-bottom: none; }
+    .lb-c-tr { top: 18px; right: 18px; border-left: none;  border-bottom: none; }
+    .lb-c-bl { bottom: 18px; left: 18px;  border-right: none; border-top: none; }
+    .lb-c-br { bottom: 18px; right: 18px; border-left: none;  border-top: none; }
+    /* HUD text tags */
+    .lb-tag { position: absolute; font-size: 0.86rem; letter-spacing: 0.18em; line-height: 1.5; }
+    .lb-tag .reg { font-size: 0.5em; vertical-align: super; }
+    .lb-tag .dim { display: block; margin-top: 6px; font-size: 0.62rem; letter-spacing: 0.12em; color: rgba(236,233,227,0.45); }
+    .lb-tag-tl { top: 40px; left: 42px; }
+    .lb-tag-bl { bottom: 46px; left: 42px; }
+    .lb-tag-br { bottom: 46px; right: 42px; text-align: right; }
+    .lb-tag .rec { color: #ff6a3d; }
+    .lb-tag-bl .rec { animation: lbBlink 1.4s steps(1) infinite; }
+    @keyframes lbBlink { 50% { opacity: 0.2; } }
+    /* ruler tick strip along the bottom */
+    .lb-ruler {
+      position: absolute; left: 0; right: 0; bottom: 0; height: 16px; opacity: 0.5;
+      background:
+        repeating-linear-gradient(90deg, rgba(236,233,227,0.5) 0 1.5px, transparent 1.5px 48px) bottom left / 100% 13px no-repeat,
+        repeating-linear-gradient(90deg, rgba(236,233,227,0.32) 0 1px, transparent 1px 9.6px) bottom left / 100% 7px no-repeat;
+    }
+    /* bottom-center film info + frame counter */
+    .lb-filminfo {
+      position: fixed; left: 50%; bottom: 34px; transform: translateX(-50%); z-index: 2;
+      display: flex; align-items: center; gap: 10px;
+      font-family: ui-monospace, "SFMono-Regular", Menlo, "Courier New", monospace;
+      font-size: 0.72rem; letter-spacing: 0.16em; color: #ece9e3; white-space: nowrap;
+    }
+    .lb-filminfo .lb-set { color: rgba(236,233,227,0.6); text-transform: uppercase; }
+    .lb-filminfo .lb-dot { color: #ff6a3d; }
+    .lb-filminfo .lb-frame { color: #fff; border: 1px solid rgba(236,233,227,0.28); padding: 3px 10px; border-radius: 2px; }
+    /* HUD entrance: fade the overlay, snap the corners in */
+    .lightbox:not([hidden]) .lb-hud { animation: lbHudIn 0.5s ease both; }
+    .lightbox:not([hidden]) .lb-corner { animation: lbCornerIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+    .lightbox:not([hidden]) .lb-c-tr { animation-delay: 0.06s; }
+    .lightbox:not([hidden]) .lb-c-bl { animation-delay: 0.12s; }
+    .lightbox:not([hidden]) .lb-c-br { animation-delay: 0.18s; }
+    @keyframes lbHudIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes lbCornerIn { from { opacity: 0; transform: scale(1.7); } to { opacity: 1; transform: scale(1); } }
+    @media (max-width: 800px) {
+      .lb-tag-tl { top: 20px; left: 18px; font-size: 0.72rem; }
+      .lb-tag-br { display: none; }                 /* declutter on phones */
+      .lb-tag-bl { bottom: 54px; left: 18px; font-size: 0.72rem; }
+      .lb-corner { width: 18px; height: 18px; }
+      .lb-filminfo { bottom: 26px; font-size: 0.64rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .lb-img.lb-anim, .lb-img.lb-adv { animation: none; filter: none; }
+      .lb-tag-bl .rec { animation: none; }
+      .lightbox:not([hidden]) .lb-corner { animation: none; }
     }
     @media (max-width: 800px) {
       .lb-prev { left: 8px; } .lb-next { right: 8px; }
@@ -1398,11 +1459,25 @@
 
   <!-- full-screen single-photo viewer (opens when you click a photo in the grid) -->
   <div class="lightbox" id="lightbox" hidden>
+    <!-- camera-viewfinder HUD (decorative; doesn't intercept clicks) -->
+    <div class="lb-hud" aria-hidden="true">
+      <div class="lb-vignette"></div>
+      <span class="lb-corner lb-c-tl"></span><span class="lb-corner lb-c-tr"></span>
+      <span class="lb-corner lb-c-bl"></span><span class="lb-corner lb-c-br"></span>
+      <div class="lb-tag lb-tag-tl">NAFFI<span class="reg">&reg;</span><span class="dim">DOCUMENTING LIGHT<br>&amp; HONEST MOMENTS</span></div>
+      <div class="lb-tag lb-tag-bl"><span class="rec">&#9679;</span> REC<span class="dim">35MM &middot; ANALOG</span></div>
+      <div class="lb-tag lb-tag-br">ISO 400<span class="dim">f/2.8 &middot; 1/250</span></div>
+      <div class="lb-ruler"></div>
+    </div>
     <button class="lb-close" aria-label="Close">&times;</button>
     <button class="lb-prev" aria-label="Previous">&#8249;</button>
     <img class="lb-img" id="lbImg" alt="" />
     <button class="lb-next" aria-label="Next">&#8250;</button>
-    <div class="lb-counter" id="lbCounter"></div>
+    <div class="lb-filminfo">
+      <span class="lb-set" id="lbSet">stills</span>
+      <span class="lb-dot">&middot;</span>
+      <span class="lb-frame">FRAME <span id="lbCounter"></span></span>
+    </div>
   </div>
 
   <!-- the image index generated by build_gallery.py -->
@@ -1750,7 +1825,9 @@
     const lb = document.getElementById("lightbox");
     const lbImg = document.getElementById("lbImg");
     const lbCounter = document.getElementById("lbCounter");
-    let lbList = [], lbIndex = 0;
+    const lbSet = document.getElementById("lbSet");
+    let lbList = [], lbIndex = 0, lbTitle = "";
+    const pad2 = (n) => String(n).padStart(2, "0");
 
     // keep the page from scrolling while any overlay is open
     function updateScrollLock() {
@@ -1768,7 +1845,7 @@
         img.alt = "";
         img.addEventListener("load", () => img.classList.add("loaded"));
         img.src = encodeURI(src);
-        img.addEventListener("click", () => openLightbox(images, i));  // zoom a single photo
+        img.addEventListener("click", () => openLightbox(images, i, title));  // zoom a single photo
         gmGrid.appendChild(img);
       });
       gm.scrollTop = 0;
@@ -1780,16 +1857,15 @@
 
     /* -- single-photo viewer (optional zoom from the grid) -- */
     function showLb(firstOpen) {
-      lbImg.classList.remove("lb-anim");
+      lbImg.classList.remove("lb-anim", "lb-adv");
       lbImg.src = encodeURI(lbList[lbIndex]);
-      if (firstOpen) {                        // scale-in only on open — prev/next swap instantly (interruptible)
-        void lbImg.offsetWidth;               // restart the entrance animation
-        lbImg.classList.add("lb-anim");
-      }
-      lbCounter.textContent = (lbIndex + 1) + " / " + lbList.length;
+      void lbImg.offsetWidth;                 // restart the focus animation
+      lbImg.classList.add(firstOpen ? "lb-anim" : "lb-adv");   // open = focus pull, swap = quick refocus
+      lbCounter.textContent = pad2(lbIndex + 1) + " / " + pad2(lbList.length);
+      if (lbSet) lbSet.textContent = lbTitle || "Stills";
     }
-    function openLightbox(images, i) {
-      lbList = images; lbIndex = i;
+    function openLightbox(images, i, title) {
+      lbList = images; lbIndex = i; lbTitle = title || "";
       lb.hidden = false;
       updateScrollLock();
       showLb(true);
