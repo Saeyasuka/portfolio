@@ -225,11 +225,12 @@
       display: flex;
       flex-direction: column;   /* lets us reorder sections with `order` */
     }
-    /* reading order: hero → About → What I Do → Featured Work */
+    /* reading order: hero → About → What I Do → Tools → Featured Work → Contact */
     .hero     { order: 0; }
     .about    { order: 1; }
     .services { order: 2; }
-    .work     { order: 3; }
+    .tools    { order: 3; }
+    .work     { order: 4; }
     .headline {
       font-family: "Newsreader", Georgia, serif;
       font-weight: 400;
@@ -960,7 +961,7 @@
 
     /* ===== Contact / footer ===== */
     .contact {
-      order: 4;                    /* last section */
+      order: 5;                    /* last section */
       position: relative; z-index: 2;
       background: var(--bg);
       padding: 3rem 0 2.5rem;
