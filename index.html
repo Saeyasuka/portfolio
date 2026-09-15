@@ -1503,27 +1503,13 @@
     });
 
     function onNavScroll() {
-      // desktop keeps the sidebar always visible — only phones/tablets collapse it
-      if (window.innerWidth > 800) {
-        if (navMin) { navMin = false; body.classList.remove("nav-min", "nav-open"); }
-        return;
-      }
       const y = window.scrollY;
       if (!navMin && y > 90)      { navMin = true;  flipMainReclaim(() => body.classList.add("nav-min")); }
       else if (navMin && y < 30)  { navMin = false; flipMainReclaim(() => body.classList.remove("nav-min", "nav-open")); }
     }
     window.addEventListener("scroll", onNavScroll, { passive: true });
-    // ONLY react to the window actually growing to desktop width — never run the
-    // collapse logic on a resize, because mobile browsers fire resize constantly
-    // while scrolling (address bar show/hide), which would flicker the sidebar.
-    window.addEventListener("resize", () => {
-      if (window.innerWidth > 800 && navMin) {
-        navMin = false;
-        body.classList.remove("nav-min", "nav-open");
-      }
-    });
     // initial state on load: set it directly, with no slide animation
-    if (window.innerWidth <= 800 && window.scrollY > 90) { navMin = true; body.classList.add("nav-min"); }
+    if (window.scrollY > 90) { navMin = true; body.classList.add("nav-min"); }
     if (miniLogo) {
       miniLogo.addEventListener("click", (e) => {
         e.preventDefault();
