@@ -59,6 +59,8 @@
       display: grid;
       grid-template-columns: 340px 1fr;
       min-height: 100vh;
+      max-width: 1500px;      /* on wide monitors, keep the mascot next to the text (big, right) instead of flung to the far corner with a void in the middle */
+      margin-inline: auto;
     }
     /* let the glow show through the layout's empty areas */
     .sidebar, .main { background: transparent; }
@@ -1501,13 +1503,19 @@
     });
 
     function onNavScroll() {
+      // desktop keeps the sidebar always visible — only phones/tablets collapse it
+      if (window.innerWidth > 800) {
+        if (navMin) { navMin = false; body.classList.remove("nav-min", "nav-open"); }
+        return;
+      }
       const y = window.scrollY;
       if (!navMin && y > 90)      { navMin = true;  flipMainReclaim(() => body.classList.add("nav-min")); }
       else if (navMin && y < 30)  { navMin = false; flipMainReclaim(() => body.classList.remove("nav-min", "nav-open")); }
     }
     window.addEventListener("scroll", onNavScroll, { passive: true });
+    window.addEventListener("resize", onNavScroll);   // un-collapse if the window grows to desktop
     // initial state on load: set it directly, with no slide animation
-    if (window.scrollY > 90) { navMin = true; body.classList.add("nav-min"); }
+    if (window.innerWidth <= 800 && window.scrollY > 90) { navMin = true; body.classList.add("nav-min"); }
     if (miniLogo) {
       miniLogo.addEventListener("click", (e) => {
         e.preventDefault();
