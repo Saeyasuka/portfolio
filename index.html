@@ -598,11 +598,17 @@
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
       cursor: pointer;                 /* click the photo = next */
     }
-    /* open = camera "focus pull" (blurred + zoomed, then snaps sharp); swap = a quick refocus */
-    @keyframes lbFocus { 0% { opacity: 0; filter: blur(12px); transform: scale(1.06); } 55% { opacity: 1; filter: blur(0); } 100% { opacity: 1; filter: blur(0); transform: scale(1); } }
+    /* open = polaroid "develop" (starts washed-out & overexposed, then color + contrast bloom in); swap = a quick refocus */
+    @keyframes lbDevelop {
+      0%   { opacity: 0.1;  filter: brightness(2.3) contrast(0.32) saturate(0.12) sepia(0.45); }
+      22%  { opacity: 1;    filter: brightness(1.7) contrast(0.55) saturate(0.35) sepia(0.34); }
+      55%  { filter: brightness(1.28) contrast(0.82) saturate(0.7)  sepia(0.16); }
+      80%  { filter: brightness(1.08) contrast(0.95) saturate(0.92) sepia(0.05); }
+      100% { opacity: 1;    filter: none; }
+    }
     @keyframes lbAdvance { 0% { filter: blur(7px); opacity: 0.45; } 100% { filter: blur(0); opacity: 1; } }
     .lb-img { position: relative; z-index: 2; }
-    .lb-img.lb-anim { animation: lbFocus 0.55s cubic-bezier(0.22, 1, 0.36, 1); }
+    .lb-img.lb-anim { animation: lbDevelop 0.95s cubic-bezier(0.33, 0.9, 0.28, 1) both; }
     .lb-img.lb-adv  { animation: lbAdvance 0.28s ease; }
     @keyframes lbFade { from { opacity: 0; } to { opacity: 1; } }
     .lightbox:not([hidden]) { animation: lbFade 0.25s ease; }
@@ -1864,12 +1870,12 @@
       lbImg.classList.remove("lb-anim", "lb-adv");
       lbImg.src = encodeURI(lbList[lbIndex]);
       void lbImg.offsetWidth;                 // restart the focus animation
-      lbImg.classList.add(firstOpen ? "lb-anim" : "lb-adv");   // open = focus pull, swap = quick refocus
+      lbImg.classList.add(firstOpen ? "lb-anim" : "lb-adv");   // open = polaroid develop, swap = quick refocus
       lbCounter.textContent = pad2(lbIndex + 1) + " / " + pad2(lbList.length);
       if (lbSet) lbSet.textContent = lbTitle || "Stills";
       // film HUD tells the truth per gallery: analog = 35mm, digital = raw
       const analog = lbRoot !== "digital";
-      if (lbFilm) lbFilm.textContent = analog ? "35MM · ANALOG" : "DIGITAL · RAW";
+      if (lbFilm) lbFilm.textContent = analog ? "35MM · ANALOG" : "DIGITAL";
       if (lbIso)  lbIso.textContent  = analog ? "ISO 400" : "ISO 200";
       if (lbExp)  lbExp.textContent  = analog ? "f/2.8 · 1/250" : "f/1.8 · 1/500";
     }
