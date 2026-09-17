@@ -997,6 +997,18 @@
                   transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
     }
     .reveal.in { opacity: 1; transform: none; }
+
+    /* ---------- section "tab" entrance: replays each time you navigate to a section ---------- */
+    @keyframes secEnter {
+      from { opacity: 0; transform: translateY(20px) scale(0.99); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .sec-enter {
+      animation: secEnter 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+      transform-origin: 50% 12%;          /* settles from where you land (the top) */
+      will-change: transform, opacity;
+    }
+    @media (prefers-reduced-motion: reduce) { .sec-enter { animation: none; } }
     @media (prefers-reduced-motion: reduce) {
       .reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
       .do-card { opacity: 1 !important; transform: none !important; transition: none !important; }  /* show cards, skip the entrance */
@@ -1590,9 +1602,30 @@
         body.classList.add("nav-open");            // slide the sidebar drawer in (no scrolling)
       });
     }
-    // picking a nav link closes the drawer and lets the link jump to its section
+    // picking a nav link closes the drawer, jumps to the section, and replays its entrance
+    function playSectionEnter(sec) {
+      if (!sec || reduceMotion) return;
+      const run = () => {
+        sec.classList.remove("sec-enter"); void sec.offsetWidth;   // restart if mid-play
+        sec.classList.add("sec-enter");
+        sec.addEventListener("animationend", () => sec.classList.remove("sec-enter"), { once: true });
+      };
+      // time the entrance to when the smooth-scroll actually lands
+      if ("onscrollend" in window) {
+        let done = false;
+        const fire = () => { if (done) return; done = true; window.removeEventListener("scrollend", fire); run(); };
+        window.addEventListener("scrollend", fire, { once: true });
+        setTimeout(fire, 850);   // fallback: already in view → no scroll → no scrollend
+      } else {
+        setTimeout(run, 420);    // browsers without scrollend (older Safari): rough estimate
+      }
+    }
     document.querySelectorAll(".nav a").forEach((a) =>
-      a.addEventListener("click", () => body.classList.remove("nav-open")));
+      a.addEventListener("click", () => {
+        body.classList.remove("nav-open");
+        const href = a.getAttribute("href");
+        if (href && href.length > 1) playSectionEnter(document.querySelector(href));
+      }));
     // clicking anywhere outside the open drawer closes it
     document.addEventListener("click", (e) => {
       if (!body.classList.contains("nav-open")) return;
