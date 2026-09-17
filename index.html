@@ -691,6 +691,10 @@
     }
     .gallery-modal[hidden] { display: none; }
     @keyframes gmIn { from { opacity: 0; transform: translateY(16px) scale(0.985); } to { opacity: 1; transform: none; } }
+    /* smooth close = mirror of the open (more specific selector overrides the base gmIn) */
+    @keyframes gmOut { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(16px) scale(0.985); } }
+    .gallery-modal.closing { animation: gmOut 0.34s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+    @media (prefers-reduced-motion: reduce) { .gallery-modal, .gallery-modal.closing { animation: none; } }
 
     .gm-bar {
       position: sticky; top: 0; z-index: 2;
@@ -1892,10 +1896,18 @@
         gmGrid.appendChild(img);
       });
       gm.scrollTop = 0;
+      clearTimeout(gmCloseTimer); gm.classList.remove("closing");   // cancel any close mid-flight
       gm.hidden = false;
       updateScrollLock();
     }
-    function closeGallery() { gm.hidden = true; updateScrollLock(); }
+    let gmCloseTimer = null;
+    function finishGmClose() { gm.classList.remove("closing"); gm.hidden = true; updateScrollLock(); }
+    function closeGallery() {
+      if (reduceMotion) { finishGmClose(); return; }
+      gm.classList.add("closing");                 // play the reverse of the open
+      clearTimeout(gmCloseTimer);
+      gmCloseTimer = setTimeout(finishGmClose, 340);   // hide when it finishes (no reliance on animationend)
+    }
     document.getElementById("gmClose").addEventListener("click", closeGallery);
 
     /* -- single-photo viewer (optional zoom from the grid) -- */
