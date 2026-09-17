@@ -598,17 +598,9 @@
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
       cursor: pointer;                 /* click the photo = next */
     }
-    /* open = polaroid "develop" (starts washed-out & overexposed, then color + contrast bloom in); swap = a quick refocus */
-    @keyframes lbDevelop {
-      0%   { opacity: 0.1;  filter: brightness(2.3) contrast(0.32) saturate(0.12) sepia(0.45); }
-      22%  { opacity: 1;    filter: brightness(1.7) contrast(0.55) saturate(0.35) sepia(0.34); }
-      55%  { filter: brightness(1.28) contrast(0.82) saturate(0.7)  sepia(0.16); }
-      80%  { filter: brightness(1.08) contrast(0.95) saturate(0.92) sepia(0.05); }
-      100% { opacity: 1;    filter: none; }
-    }
+    /* open = Apple-style spring "hero" zoom from the tapped thumbnail (velocity-aware, driven in JS); swap = a quick refocus */
     @keyframes lbAdvance { 0% { filter: blur(7px); opacity: 0.45; } 100% { filter: blur(0); opacity: 1; } }
-    .lb-img { position: relative; z-index: 2; }
-    .lb-img.lb-anim { animation: lbDevelop 0.95s cubic-bezier(0.33, 0.9, 0.28, 1) both; }
+    .lb-img { position: relative; z-index: 2; will-change: transform; }
     .lb-img.lb-adv  { animation: lbAdvance 0.28s ease; }
     @keyframes lbFade { from { opacity: 0; } to { opacity: 1; } }
     .lightbox:not([hidden]) { animation: lbFade 0.25s ease; }
@@ -1834,7 +1826,8 @@
     const lbCounter = document.getElementById("lbCounter");
     const lbSet = document.getElementById("lbSet");
     let lbList = [], lbIndex = 0, lbTitle = "", lbRoot = "";
-    const lbFilm = document.getElementById("lbFilm");   // "35MM · ANALOG" vs "DIGITAL · RAW"
+    let lbSourceRect = null, lbSpringRAF = null;        // hero-open: origin thumbnail + running spring
+    const lbFilm = document.getElementById("lbFilm");   // "35MM · ANALOG" vs "DIGITAL"
     const lbIso  = document.getElementById("lbIso");
     const lbExp  = document.getElementById("lbExp");
     const pad2 = (n) => String(n).padStart(2, "0");
@@ -1855,7 +1848,7 @@
         img.alt = "";
         img.addEventListener("load", () => img.classList.add("loaded"));
         img.src = encodeURI(src);
-        img.addEventListener("click", () => openLightbox(images, i, title, root));  // zoom a single photo
+        img.addEventListener("click", (e) => openLightbox(images, i, title, root, e.currentTarget));  // zoom a single photo
         gmGrid.appendChild(img);
       });
       gm.scrollTop = 0;
@@ -1866,26 +1859,81 @@
     document.getElementById("gmClose").addEventListener("click", closeGallery);
 
     /* -- single-photo viewer (optional zoom from the grid) -- */
-    function showLb(firstOpen) {
-      lbImg.classList.remove("lb-anim", "lb-adv");
-      lbImg.src = encodeURI(lbList[lbIndex]);
-      void lbImg.offsetWidth;                 // restart the focus animation
-      lbImg.classList.add(firstOpen ? "lb-anim" : "lb-adv");   // open = polaroid develop, swap = quick refocus
+    function setLbHud() {
       lbCounter.textContent = pad2(lbIndex + 1) + " / " + pad2(lbList.length);
       if (lbSet) lbSet.textContent = lbTitle || "Stills";
-      // film HUD tells the truth per gallery: analog = 35mm, digital = raw
+      // film HUD tells the truth per gallery: analog = 35mm film, digital = edited
       const analog = lbRoot !== "digital";
       if (lbFilm) lbFilm.textContent = analog ? "35MM · ANALOG" : "DIGITAL";
       if (lbIso)  lbIso.textContent  = analog ? "ISO 400" : "ISO 200";
       if (lbExp)  lbExp.textContent  = analog ? "f/2.8 · 1/250" : "f/1.8 · 1/500";
     }
-    function openLightbox(images, i, title, root) {
+
+    /* Apple-style hero open: spring the photo up FROM the thumbnail it was tapped on.
+       A real spring (response ~0.42s, ~3% overshoot) — animates transform only, from the
+       live on-screen values, so it reads as a physical object arriving, not a fixed tween. */
+    function runHeroOpen() {
+      const fin = lbImg.getBoundingClientRect();          // final, settled frame (transform cleared)
+      const s = lbSourceRect;
+      if (!fin.width || !s || !s.width) { lbImg.style.opacity = ""; return; }  // no origin → just show
+      const scale0 = Math.max(0.04, s.width / fin.width);                       // uniform → no distortion
+      const dx = (s.left + s.width / 2)  - (fin.left + fin.width / 2);          // thumbnail centre offset
+      const dy = (s.top  + s.height / 2) - (fin.top  + fin.height / 2);
+      const k = 220, c = 22;                              // ω0≈14.8, ζ≈0.74 → snappy with a hair of pop
+      let p = 0, v = 0, last = null;
+      const apply = (pp) => {
+        const tx = dx * (1 - pp), ty = dy * (1 - pp);
+        const sc = scale0 + (1 - scale0) * pp;
+        lbImg.style.transform = "translate(" + tx + "px, " + ty + "px) scale(" + sc + ")";
+      };
+      apply(0);
+      lbImg.style.opacity = "";                           // reveal now, already sitting on the thumbnail
+      const step = (now) => {
+        if (last === null) last = now;
+        let dt = (now - last) / 1000; last = now;
+        dt = Math.min(dt, 0.032);                         // guard against tab-throttle jumps
+        const a = -k * (p - 1) - c * v;
+        v += a * dt; p += v * dt;
+        if (Math.abs(p - 1) < 0.001 && Math.abs(v) < 0.02) {
+          lbImg.style.transform = "";                     // settle exactly on the final frame
+          lbSpringRAF = null; return;
+        }
+        apply(p);
+        lbSpringRAF = requestAnimationFrame(step);
+      };
+      lbSpringRAF = requestAnimationFrame(step);
+    }
+
+    function showLb(firstOpen) {
+      if (lbSpringRAF) { cancelAnimationFrame(lbSpringRAF); lbSpringRAF = null; }
+      lbImg.classList.remove("lb-adv");
+      lbImg.style.transform = "";                         // clear so we can measure the settled frame
+      setLbHud();
+      if (firstOpen && !reduceMotion && lbSourceRect) {
+        lbImg.style.opacity = "0";                        // hide until it's parked on the thumbnail
+        let ran = false;
+        const go = () => { if (ran) return; ran = true; lbImg.onload = null; runHeroOpen(); };
+        lbImg.onload = go;
+        lbImg.src = encodeURI(lbList[lbIndex]);
+        if (lbImg.complete && lbImg.naturalWidth) go();   // cached → measure immediately
+      } else {
+        lbImg.style.opacity = "";
+        lbImg.src = encodeURI(lbList[lbIndex]);
+        if (!reduceMotion) { void lbImg.offsetWidth; lbImg.classList.add("lb-adv"); }  // swap = quick refocus
+      }
+    }
+    function openLightbox(images, i, title, root, srcEl) {
       lbList = images; lbIndex = i; lbTitle = title || ""; lbRoot = root || "";
+      lbSourceRect = srcEl ? srcEl.getBoundingClientRect() : null;   // capture the hero origin
       lb.hidden = false;
       updateScrollLock();
       showLb(true);
     }
-    function closeLightbox() { lb.hidden = true; updateScrollLock(); }
+    function closeLightbox() {
+      if (lbSpringRAF) { cancelAnimationFrame(lbSpringRAF); lbSpringRAF = null; }
+      lbImg.style.transform = ""; lbImg.style.opacity = "";
+      lb.hidden = true; updateScrollLock();
+    }
     function lbStep(d) {
       lbIndex = (lbIndex + d + lbList.length) % lbList.length;
       showLb();
