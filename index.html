@@ -1869,36 +1869,38 @@
       if (lbExp)  lbExp.textContent  = analog ? "f/2.8 · 1/250" : "f/1.8 · 1/500";
     }
 
-    /* Apple-style hero open: spring the photo up FROM the thumbnail it was tapped on.
-       A real spring (response ~0.42s, ~3% overshoot) — animates transform only, from the
-       live on-screen values, so it reads as a physical object arriving, not a fixed tween. */
-    function runHeroOpen() {
-      const fin = lbImg.getBoundingClientRect();          // final, settled frame (transform cleared)
+    /* Apple-style hero: the photo springs open FROM the tapped thumbnail and shrinks back INTO
+       it on close. FLIP (uniform scale + centre-offset translate → no distortion), one shared
+       velocity-aware spring, transform-only. p=1 is the full frame, p=0 is the thumbnail. */
+    function heroGeom() {
+      const fin = lbImg.getBoundingClientRect();          // settled full-frame (transform cleared)
       const s = lbSourceRect;
-      if (!fin.width || !s || !s.width) { lbImg.style.opacity = ""; return; }  // no origin → just show
-      const scale0 = Math.max(0.04, s.width / fin.width);                       // uniform → no distortion
-      const dx = (s.left + s.width / 2)  - (fin.left + fin.width / 2);          // thumbnail centre offset
-      const dy = (s.top  + s.height / 2) - (fin.top  + fin.height / 2);
-      const k = 220, c = 22;                              // ω0≈14.8, ζ≈0.74 → snappy with a hair of pop
-      let p = 0, v = 0, last = null;
-      const apply = (pp) => {
-        const tx = dx * (1 - pp), ty = dy * (1 - pp);
-        const sc = scale0 + (1 - scale0) * pp;
-        lbImg.style.transform = "translate(" + tx + "px, " + ty + "px) scale(" + sc + ")";
+      if (!fin.width || !s || !s.width) return null;      // no origin → caller shows/hides plainly
+      return {
+        scale0: Math.max(0.04, s.width / fin.width),      // uniform → no distortion
+        dx: (s.left + s.width / 2) - (fin.left + fin.width / 2),   // thumbnail centre offset
+        dy: (s.top  + s.height / 2) - (fin.top  + fin.height / 2),
       };
-      apply(0);
-      lbImg.style.opacity = "";                           // reveal now, already sitting on the thumbnail
+    }
+    function heroApply(g, p) {
+      const tx = g.dx * (1 - p), ty = g.dy * (1 - p);
+      const sc = g.scale0 + (1 - g.scale0) * p;
+      lbImg.style.transform = "translate(" + tx + "px, " + ty + "px) scale(" + sc + ")";
+    }
+    // spring `p` from its start toward `target` (0 or 1); k/c tune response & bounce
+    function heroSpring(g, from, target, k, c, onDone) {
+      let p = from, v = 0, last = null;
+      heroApply(g, p);
       const step = (now) => {
         if (last === null) last = now;
         let dt = (now - last) / 1000; last = now;
         dt = Math.min(dt, 0.032);                         // guard against tab-throttle jumps
-        const a = -k * (p - 1) - c * v;
-        v += a * dt; p += v * dt;
-        if (Math.abs(p - 1) < 0.001 && Math.abs(v) < 0.02) {
-          lbImg.style.transform = "";                     // settle exactly on the final frame
-          lbSpringRAF = null; return;
+        v += (-k * (p - target) - c * v) * dt;
+        p += v * dt;
+        if (Math.abs(p - target) < 0.002 && Math.abs(v) < 0.02) {
+          heroApply(g, target); lbSpringRAF = null; if (onDone) onDone(); return;
         }
-        apply(p);
+        heroApply(g, p);
         lbSpringRAF = requestAnimationFrame(step);
       };
       lbSpringRAF = requestAnimationFrame(step);
@@ -1912,7 +1914,14 @@
       if (firstOpen && !reduceMotion && lbSourceRect) {
         lbImg.style.opacity = "0";                        // hide until it's parked on the thumbnail
         let ran = false;
-        const go = () => { if (ran) return; ran = true; lbImg.onload = null; runHeroOpen(); };
+        const go = () => {
+          if (ran) return; ran = true; lbImg.onload = null;
+          const g = heroGeom();
+          lbImg.style.opacity = "";                       // reveal (already parked on the thumbnail, or full)
+          if (!g) return;
+          // k=220,c=18 → ζ≈0.61, ~8% overshoot: a real, lively pop as it lands
+          heroSpring(g, 0, 1, 220, 18, () => { lbImg.style.transform = ""; });
+        };
         lbImg.onload = go;
         lbImg.src = encodeURI(lbList[lbIndex]);
         if (lbImg.complete && lbImg.naturalWidth) go();   // cached → measure immediately
@@ -1925,14 +1934,25 @@
     function openLightbox(images, i, title, root, srcEl) {
       lbList = images; lbIndex = i; lbTitle = title || ""; lbRoot = root || "";
       lbSourceRect = srcEl ? srcEl.getBoundingClientRect() : null;   // capture the hero origin
+      lb.style.opacity = ""; lb.style.transition = "";
       lb.hidden = false;
       updateScrollLock();
       showLb(true);
     }
+    function finishClose() {
+      lbImg.style.transform = ""; lbImg.style.opacity = "";
+      lb.style.transition = ""; lb.style.opacity = "";
+      lb.hidden = true; updateScrollLock();
+    }
     function closeLightbox() {
       if (lbSpringRAF) { cancelAnimationFrame(lbSpringRAF); lbSpringRAF = null; }
-      lbImg.style.transform = ""; lbImg.style.opacity = "";
-      lb.hidden = true; updateScrollLock();
+      const g = (!reduceMotion && lbSourceRect) ? heroGeom() : null;
+      if (!g) { finishClose(); return; }
+      // reverse hero: tuck the photo back into its thumbnail while the scrim dims out
+      lb.style.transition = "opacity 0.32s ease";
+      requestAnimationFrame(() => { lb.style.opacity = "0"; });
+      // k=250,c=27 → ζ≈0.85, clean tuck-home with barely any overshoot
+      heroSpring(g, 1, 0, 250, 27, finishClose);
     }
     function lbStep(d) {
       lbIndex = (lbIndex + d + lbList.length) % lbList.length;
