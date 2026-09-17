@@ -687,10 +687,10 @@
       position: fixed; inset: 0; z-index: 90;
       background: var(--bg);
       overflow-y: auto;
-      animation: gmIn 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+      animation: gmIn 0.44s cubic-bezier(0.22, 1, 0.36, 1);
     }
     .gallery-modal[hidden] { display: none; }
-    @keyframes gmIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+    @keyframes gmIn { from { opacity: 0; transform: translateY(16px) scale(0.985); } to { opacity: 1; transform: none; } }
 
     .gm-bar {
       position: sticky; top: 0; z-index: 2;
@@ -729,11 +729,18 @@
       width: 100%; display: block; margin: 0 0 12px;
       border-radius: 6px; break-inside: avoid;
       cursor: zoom-in;
-      opacity: 0;
-      transition: opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1), transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+      opacity: 1; transform: none;                       /* default = visible; entrance is pure CSS */
+      transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+      /* staggered cascade as the set opens — `backwards` holds the start frame during the per-image delay,
+         and leaves NO forwards fill, so the hover lift below still works once it has played */
+      animation: gmCardIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+      animation-delay: var(--d, 0ms);
     }
-    .gm-grid img.loaded { opacity: 1; }
+    @keyframes gmCardIn { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
     .gm-grid img:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(0,0,0,0.14); }
+    @media (prefers-reduced-motion: reduce) {
+      .gm-grid img { animation: none; opacity: 1; transform: none; }   /* no cascade, just show */
+    }
 
     @media (max-width: 800px) {
       .gm-bar { padding: 1.2rem 1.2rem 1rem; }
@@ -1879,7 +1886,7 @@
         const img = document.createElement("img");
         img.loading = "lazy";
         img.alt = "";
-        img.addEventListener("load", () => img.classList.add("loaded"));
+        img.style.setProperty("--d", Math.min(i, 16) * 35 + "ms");   // staggered cascade (capped for big sets)
         img.src = encodeURI(src);
         img.addEventListener("click", (e) => openLightbox(images, i, title, root, e.currentTarget));  // zoom a single photo
         gmGrid.appendChild(img);
