@@ -589,6 +589,7 @@
       position: fixed; inset: 0; z-index: 100;
       background: rgba(15, 15, 18, 0.94);
       display: flex; align-items: center; justify-content: center;
+      --lb-accent: #d4a84b;            /* warm gold — echoes the section-underline accent */
     }
     .lightbox[hidden] { display: none; }
     .lb-img {
@@ -639,7 +640,7 @@
     .lb-tag-tl { top: 40px; left: 42px; }
     .lb-tag-bl { bottom: 46px; left: 42px; }
     .lb-tag-br { bottom: 46px; right: 42px; text-align: right; }
-    .lb-tag .rec { color: #ff6a3d; }
+    .lb-tag .rec { color: var(--lb-accent); }
     .lb-tag-bl .rec { animation: lbBlink 1.4s steps(1) infinite; }
     @keyframes lbBlink { 50% { opacity: 0.2; } }
     /* ruler tick strip along the bottom */
@@ -657,7 +658,7 @@
       font-size: 0.72rem; letter-spacing: 0.16em; color: #ece9e3; white-space: nowrap;
     }
     .lb-filminfo .lb-set { color: rgba(236,233,227,0.6); text-transform: uppercase; }
-    .lb-filminfo .lb-dot { color: #ff6a3d; }
+    .lb-filminfo .lb-dot { color: var(--lb-accent); }
     .lb-filminfo .lb-frame { color: #fff; border: 1px solid rgba(236,233,227,0.28); padding: 3px 10px; border-radius: 2px; }
     /* HUD entrance: fade the overlay, snap the corners in */
     .lightbox:not([hidden]) .lb-hud { animation: lbHudIn 0.5s ease both; }
@@ -1465,8 +1466,8 @@
       <span class="lb-corner lb-c-tl"></span><span class="lb-corner lb-c-tr"></span>
       <span class="lb-corner lb-c-bl"></span><span class="lb-corner lb-c-br"></span>
       <div class="lb-tag lb-tag-tl">NAFFI<span class="reg">&reg;</span><span class="dim">DOCUMENTING LIGHT<br>&amp; HONEST MOMENTS</span></div>
-      <div class="lb-tag lb-tag-bl"><span class="rec">&#9679;</span> REC<span class="dim">35MM &middot; ANALOG</span></div>
-      <div class="lb-tag lb-tag-br">ISO 400<span class="dim">f/2.8 &middot; 1/250</span></div>
+      <div class="lb-tag lb-tag-bl"><span class="rec">&#9679;</span> REC<span class="dim" id="lbFilm">35MM &middot; ANALOG</span></div>
+      <div class="lb-tag lb-tag-br"><span id="lbIso">ISO 400</span><span class="dim" id="lbExp">f/2.8 &middot; 1/250</span></div>
       <div class="lb-ruler"></div>
     </div>
     <button class="lb-close" aria-label="Close">&times;</button>
@@ -1718,7 +1719,7 @@
       return n + (n === 1 ? " photo" : " photos");
     }
 
-    function makeCard(images, title) {
+    function makeCard(images, title, root) {
       const card = galEl("button", "set-card");
       card.type = "button";
 
@@ -1739,13 +1740,13 @@
       top.appendChild(l);
       card.appendChild(top);
 
-      card.addEventListener("click", () => openGallery(images, title || "Gallery"));
+      card.addEventListener("click", () => openGallery(images, title || "Gallery", root));
       return card;
     }
 
     // a filled preview for a single-set category: 1 big + a few small tiles.
     // `covers` (basenames) picks which photos show, in order; falls back to the rest.
-    function makeMosaic(images, title, covers) {
+    function makeMosaic(images, title, covers, root) {
       const SHOW = 5;
       const picks = [];
       (covers || []).forEach((bn) => {
@@ -1770,22 +1771,22 @@
           more.textContent = "+" + remaining;
           tile.appendChild(more);
         }
-        tile.addEventListener("click", () => openGallery(images, title));
+        tile.addEventListener("click", () => openGallery(images, title, root));
         m.appendChild(tile);
       });
       return m;
     }
 
     // walk the tree: sets become cards, sub-folders become labelled sections
-    function renderNode(name, node, container, depth, topLevel) {
+    function renderNode(name, node, container, depth, topLevel, root) {
       if (isSet(node)) {
         if (topLevel) {
           const nice = name.charAt(0).toUpperCase() + name.slice(1);
           const covers = (container.dataset.cover || "").split(",").map((s) => s.trim()).filter(Boolean);
-          container.appendChild(makeMosaic(node.images, nice, covers));
+          container.appendChild(makeMosaic(node.images, nice, covers, root));
         } else {
           const grid = galEl("div", "card-grid");
-          grid.appendChild(makeCard(node.images, name));
+          grid.appendChild(makeCard(node.images, name, root));
           container.appendChild(grid);
         }
         return;
@@ -1797,14 +1798,14 @@
         const child = folders[childName];
         if (isSet(child)) {
           if (!grid) grid = galEl("div", "card-grid");
-          grid.appendChild(makeCard(child.images, childName));
+          grid.appendChild(makeCard(child.images, childName, root));
         } else {
           flush();
           const sub = galEl("div", "subcollection depth-" + depth);
           const label = galEl("div", "sub-label");
           label.textContent = childName;
           sub.appendChild(label);
-          renderNode(childName, child, sub, depth + 1, false);
+          renderNode(childName, child, sub, depth + 1, false, root);
           container.appendChild(sub);
         }
       });
@@ -1813,7 +1814,7 @@
 
     document.querySelectorAll(".photo-set").forEach((box) => {
       const node = (window.GALLERY || {})[box.dataset.node];
-      if (node) renderNode(box.dataset.node, node, box, 1, true);
+      if (node) renderNode(box.dataset.node, node, box, 1, true, box.dataset.node);
     });
 
     /* ===== GALLERY OVERLAY + SINGLE-PHOTO VIEWER ===== */
@@ -1826,7 +1827,10 @@
     const lbImg = document.getElementById("lbImg");
     const lbCounter = document.getElementById("lbCounter");
     const lbSet = document.getElementById("lbSet");
-    let lbList = [], lbIndex = 0, lbTitle = "";
+    let lbList = [], lbIndex = 0, lbTitle = "", lbRoot = "";
+    const lbFilm = document.getElementById("lbFilm");   // "35MM · ANALOG" vs "DIGITAL · RAW"
+    const lbIso  = document.getElementById("lbIso");
+    const lbExp  = document.getElementById("lbExp");
     const pad2 = (n) => String(n).padStart(2, "0");
 
     // keep the page from scrolling while any overlay is open
@@ -1835,7 +1839,7 @@
     }
 
     /* -- the gallery grid (opens when you click a card/mosaic) -- */
-    function openGallery(images, title) {
+    function openGallery(images, title, root) {
       gmName.textContent = title || "Gallery";
       gmCount.textContent = countLabel(images.length);
       gmGrid.innerHTML = "";
@@ -1845,7 +1849,7 @@
         img.alt = "";
         img.addEventListener("load", () => img.classList.add("loaded"));
         img.src = encodeURI(src);
-        img.addEventListener("click", () => openLightbox(images, i, title));  // zoom a single photo
+        img.addEventListener("click", () => openLightbox(images, i, title, root));  // zoom a single photo
         gmGrid.appendChild(img);
       });
       gm.scrollTop = 0;
@@ -1863,9 +1867,14 @@
       lbImg.classList.add(firstOpen ? "lb-anim" : "lb-adv");   // open = focus pull, swap = quick refocus
       lbCounter.textContent = pad2(lbIndex + 1) + " / " + pad2(lbList.length);
       if (lbSet) lbSet.textContent = lbTitle || "Stills";
+      // film HUD tells the truth per gallery: analog = 35mm, digital = raw
+      const analog = lbRoot !== "digital";
+      if (lbFilm) lbFilm.textContent = analog ? "35MM · ANALOG" : "DIGITAL · RAW";
+      if (lbIso)  lbIso.textContent  = analog ? "ISO 400" : "ISO 200";
+      if (lbExp)  lbExp.textContent  = analog ? "f/2.8 · 1/250" : "f/1.8 · 1/500";
     }
-    function openLightbox(images, i, title) {
-      lbList = images; lbIndex = i; lbTitle = title || "";
+    function openLightbox(images, i, title, root) {
+      lbList = images; lbIndex = i; lbTitle = title || ""; lbRoot = root || "";
       lb.hidden = false;
       updateScrollLock();
       showLb(true);
